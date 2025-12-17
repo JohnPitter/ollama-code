@@ -157,6 +157,22 @@ func LoadDefault() (*Config, error) {
 	return Load(configPath)
 }
 
+// LoadOrOptimize carrega config existente ou cria otimizado baseado em hardware
+func LoadOrOptimize() (*Config, error) {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		return nil, err
+	}
+
+	// Se config existe, carregar
+	if _, err := os.Stat(configPath); err == nil {
+		return Load(configPath)
+	}
+
+	// Config não existe - retornar nil para permitir otimização
+	return nil, nil
+}
+
 // Validate valida configuração
 func (c *Config) Validate() error {
 	if c.Ollama.URL == "" {

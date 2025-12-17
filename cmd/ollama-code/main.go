@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/johnpitter/ollama-code/internal/agent"
 	"github.com/johnpitter/ollama-code/internal/config"
+	"github.com/johnpitter/ollama-code/internal/hardware"
 	"github.com/johnpitter/ollama-code/internal/modes"
 	"github.com/spf13/cobra"
 )
@@ -71,14 +72,51 @@ func runChat(cmd *cobra.Command, args []string) {
 	var err error
 
 	if flagConfigFile != "" {
+		// Config file especificado
 		appConfig, err = config.Load(flagConfigFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+			os.Exit(1)
+		}
 	} else {
-		appConfig, err = config.LoadDefault()
-	}
+		// Tentar carregar config padrão
+		appConfig, err = config.LoadOrOptimize()
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Se config é nil, significa que não existe - criar otimizado
+		if appConfig == nil {
+			green := color.New(color.FgGreen, color.Bold)
+			cyan := color.New(color.FgCyan, color.Bold)
+
+			cyan.Println("\n🔍 First run detected - Analyzing your hardware...")
+
+			// Detectar hardware e otimizar
+			optimizer := hardware.NewOptimizer()
+			optimizedConfig, specs, preset, err := optimizer.DetectAndOptimize()
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error detecting hardware: %v\n", err)
+				fmt.Println("Using default configuration instead...")
+				appConfig = config.DefaultConfig()
+			} else {
+				appConfig = optimizedConfig
+
+				// Mostrar relatório
+				fmt.Println(hardware.PrintOptimizationReport(specs, preset, appConfig))
+
+				// Salvar configuração
+				configPath, _ := config.GetConfigPath()
+				if err := appConfig.Save(configPath); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: Could not save config: %v\n", err)
+				} else {
+					green.Printf("✅ Configuration saved to: %s\n\n", configPath)
+				}
+			}
+		}
 	}
 
 	// Validar configuração
