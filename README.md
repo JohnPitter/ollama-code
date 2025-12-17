@@ -10,6 +10,7 @@
 
 ## ✨ Características
 
+### Base Features
 - 🧠 **Linguagem Natural** - Sem comandos especiais (`/read`, `/exec`), apenas fale naturalmente
 - 🎯 **Detecção Inteligente** - IA detecta automaticamente suas intenções usando LLM
 - 🔧 **8+ Ferramentas** - Leitura/escrita de arquivos, execução de comandos, git, análise de código
@@ -21,6 +22,16 @@
   - **AUTONOMOUS**: Totalmente automático
 - ⚡ **Performance Máxima** - Startup <15ms, streaming em tempo real
 - 🔒 **Privacidade** - 100% local, sem envio de dados para nuvem
+
+### Enterprise Features ✨ NEW!
+- 💾 **Checkpoints & Recovery** - Volte no tempo, desfaça mudanças, recupere estados anteriores
+- 📂 **Session Management** - Salve e retome sessões de trabalho
+- 🧠 **Hierarchical Memory** - 5 níveis de memória (Enterprise → Project → Rules → User → Local)
+- ⚡ **Slash Commands** - 10+ comandos built-in (/help, /checkpoint, /session, /doctor, etc)
+- 🪝 **Hooks System** - Pre/post hooks para validação e automação
+- 🎨 **Output Styles** - 4 estilos de output (default, explanatory, learning, corporate)
+- 🚀 **Performance** - Context cache, async tasks, otimizações
+- 🏥 **Diagnostics** - /doctor para health checks completos
 
 ---
 

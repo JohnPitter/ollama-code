@@ -5,7 +5,8 @@
       "Bash(git commit:*)",
       "Bash(ROADMAP_temp.md)",
       "Bash(git push)",
-      "Bash(go mod tidy:*)"
+      "Bash(go mod tidy:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
