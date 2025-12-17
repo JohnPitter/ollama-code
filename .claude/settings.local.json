@@ -9,7 +9,8 @@
       "Bash(find:*)",
       "Bash(chmod +x C:/Users/joaop/Desenvolvimento/ollama-code/build.sh)",
       "Bash(./build.sh:*)",
-      "Bash(/c/Program Files/Go/bin/go mod:*)"
+      "Bash(/c/Program Files/Go/bin/go mod:*)",
+      "Bash(./build/ollama-code:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,15 +9,17 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/johnpitter/ollama-code/internal/agent"
+	"github.com/johnpitter/ollama-code/internal/config"
 	"github.com/johnpitter/ollama-code/internal/modes"
 	"github.com/spf13/cobra"
 )
 
 var (
-	flagMode    string
-	flagModel   string
-	flagURL     string
-	flagWorkDir string
+	flagMode       string
+	flagModel      string
+	flagURL        string
+	flagWorkDir    string
+	flagConfigFile string
 )
 
 func main() {
@@ -35,10 +37,11 @@ func main() {
 		Run:   runChat,
 	}
 
-	chatCmd.Flags().StringVarP(&flagMode, "mode", "m", "interactive", "Operation mode: readonly, interactive, autonomous")
-	chatCmd.Flags().StringVar(&flagModel, "model", "qwen2.5-coder:32b-instruct-q6_K", "Ollama model to use")
-	chatCmd.Flags().StringVar(&flagURL, "url", "http://localhost:11434", "Ollama server URL")
-	chatCmd.Flags().StringVarP(&flagWorkDir, "workdir", "w", ".", "Working directory")
+	chatCmd.Flags().StringVarP(&flagMode, "mode", "m", "", "Operation mode: readonly, interactive, autonomous")
+	chatCmd.Flags().StringVar(&flagModel, "model", "", "Ollama model to use")
+	chatCmd.Flags().StringVar(&flagURL, "url", "", "Ollama server URL")
+	chatCmd.Flags().StringVarP(&flagWorkDir, "workdir", "w", "", "Working directory")
+	chatCmd.Flags().StringVarP(&flagConfigFile, "config", "c", "", "Config file path (default: ~/.ollama-code/config.json)")
 
 	// Ask command (one-shot)
 	askCmd := &cobra.Command{
@@ -63,12 +66,47 @@ func main() {
 func runChat(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
+	// Carregar configuração
+	var appConfig *config.Config
+	var err error
+
+	if flagConfigFile != "" {
+		appConfig, err = config.Load(flagConfigFile)
+	} else {
+		appConfig, err = config.LoadDefault()
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Validar configuração
+	if err := appConfig.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Flags sobrescrevem config
+	if flagURL != "" {
+		appConfig.Ollama.URL = flagURL
+	}
+	if flagModel != "" {
+		appConfig.Ollama.Model = flagModel
+	}
+	if flagMode != "" {
+		appConfig.App.Mode = flagMode
+	}
+	if flagWorkDir != "" {
+		appConfig.App.WorkDir = flagWorkDir
+	}
+
 	// Criar agente
 	cfg := agent.Config{
-		OllamaURL: flagURL,
-		Model:     flagModel,
-		Mode:      modes.ParseMode(flagMode),
-		WorkDir:   flagWorkDir,
+		OllamaURL: appConfig.Ollama.URL,
+		Model:     appConfig.Ollama.Model,
+		Mode:      modes.ParseMode(appConfig.App.Mode),
+		WorkDir:   appConfig.App.WorkDir,
 	}
 
 	ag, err := agent.NewAgent(cfg)
@@ -82,7 +120,7 @@ func runChat(cmd *cobra.Command, args []string) {
 	yellow := color.New(color.FgYellow)
 
 	blue.Println("\n🤖 Ollama Code - AI Code Assistant")
-	fmt.Printf("Modelo: %s\n", flagModel)
+	fmt.Printf("Modelo: %s\n", appConfig.Ollama.Model)
 	fmt.Printf("Modo: %s (%s)\n", ag.GetMode(), ag.GetMode().Description())
 	fmt.Printf("Diretório: %s\n", ag.GetWorkDir())
 	yellow.Println("\nDigite 'exit' para sair, 'help' para ajuda\n")
