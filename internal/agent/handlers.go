@@ -6,6 +6,7 @@ import (
 
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
+	"github.com/johnpitter/ollama-code/internal/tools"
 )
 
 // handleReadFile processa leitura de arquivo
@@ -41,7 +42,7 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 	}
 
 	// Obter parâmetros do LLM
-	response, err := a.llmClient.Complete(ctx, []llm.Message{
+	_, err := a.llmClient.Complete(ctx, []llm.Message{
 		{
 			Role: "user",
 			Content: fmt.Sprintf(`Extraia os seguintes parâmetros desta mensagem e retorne em formato JSON:
@@ -88,7 +89,11 @@ func (a *Agent) handleExecuteCommand(ctx context.Context, result *intent.Detecti
 	}
 
 	// Verificar se é perigoso
-	cmdExecutor := a.toolRegistry.List()[2].(*tools.CommandExecutor)
+	cmdTool, _ := a.toolRegistry.Get("command_executor")
+	cmdExecutor, ok := cmdTool.(*tools.CommandExecutor)
+	if !ok {
+		return "Erro interno: ferramenta não encontrada", nil
+	}
 	if cmdExecutor.IsDangerous(command) {
 		if a.mode.RequiresConfirmation() {
 			confirmed, err := a.confirmManager.ConfirmDangerousAction(

@@ -6,7 +6,10 @@
       "Bash(ROADMAP_temp.md)",
       "Bash(git push)",
       "Bash(go mod tidy:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(chmod +x C:/Users/joaop/Desenvolvimento/ollama-code/build.sh)",
+      "Bash(./build.sh:*)",
+      "Bash(/c/Program Files/Go/bin/go mod:*)"
     ],
     "deny": [],
     "ask": []
