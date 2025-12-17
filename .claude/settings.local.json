@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(ROADMAP_temp.md)"
+      "Bash(ROADMAP_temp.md)",
+      "Bash(git push)",
+      "Bash(go mod tidy:*)"
     ],
     "deny": [],
     "ask": []
