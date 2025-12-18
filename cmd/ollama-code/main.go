@@ -161,7 +161,7 @@ func runChat(cmd *cobra.Command, args []string) {
 	fmt.Printf("Modelo: %s\n", appConfig.Ollama.Model)
 	fmt.Printf("Modo: %s (%s)\n", ag.GetMode(), ag.GetMode().Description())
 	fmt.Printf("Diretório: %s\n", ag.GetWorkDir())
-	yellow.Println("\nDigite 'exit' para sair, 'help' para ajuda\n")
+	yellow.Println("\nDigite 'exit' para sair, 'help' para ajuda")
 
 	// Se tem mensagem inicial
 	if len(args) > 0 {
@@ -246,14 +246,14 @@ func runAsk(cmd *cobra.Command, args []string) {
 
 func showHelp() {
 	blue := color.New(color.FgBlue, color.Bold)
-	blue.Println("\n📚 Comandos Disponíveis:\n")
+	blue.Println("\n📚 Comandos Disponíveis:")
 
 	fmt.Println("  exit/quit     - Sair do chat")
 	fmt.Println("  help          - Mostrar esta ajuda")
 	fmt.Println("  clear         - Limpar histórico")
 	fmt.Println("  mode          - Mostrar modo atual")
 	fmt.Println("  pwd           - Mostrar diretório atual")
-	fmt.Println("\n💡 Exemplos de uso:\n")
+	fmt.Println("\n💡 Exemplos de uso:")
 	fmt.Println("  - Leia o arquivo main.go")
 	fmt.Println("  - Mostre a estrutura do projeto")
 	fmt.Println("  - Execute os testes")

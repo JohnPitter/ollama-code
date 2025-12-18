@@ -240,13 +240,10 @@ func (m *Manager) checkpointPath(checkpointID string) string {
 
 // captureGitState captura estado do Git
 func (m *Manager) captureGitState(cp *Checkpoint, workDir string) {
-	// Tentar obter branch
-	branchCmd := fmt.Sprintf("cd %s && git rev-parse --abbrev-ref HEAD", workDir)
-	// Simplificado - na produção usar exec.Command
-
-	// Tentar obter commit
-	commitCmd := fmt.Sprintf("cd %s && git rev-parse HEAD", workDir)
-	_ = commitCmd
+	// TODO: Implementar captura real do estado Git
+	// Usar exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	// e exec.Command("git", "rev-parse", "HEAD")
+	_ = workDir
 }
 
 // generateID gera ID único

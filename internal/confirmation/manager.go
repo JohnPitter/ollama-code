@@ -47,13 +47,13 @@ func (m *Manager) Confirm(action, details string) (bool, error) {
 
 	switch response {
 	case "s", "sim", "y", "yes":
-		m.green.Println("✓ Confirmado\n")
+		m.green.Println("✓ Confirmado")
 		return true, nil
 	case "n", "não", "nao", "no":
-		m.red.Println("✗ Cancelado\n")
+		m.red.Println("✗ Cancelado")
 		return false, nil
 	default:
-		m.red.Println("✗ Resposta inválida. Cancelando.\n")
+		m.red.Println("✗ Resposta inválida. Cancelando.")
 		return false, nil
 	}
 }
@@ -81,10 +81,10 @@ func (m *Manager) ConfirmWithPreview(action, preview string) (bool, error) {
 
 	switch response {
 	case "s", "sim", "y", "yes":
-		m.green.Println("✓ Confirmado\n")
+		m.green.Println("✓ Confirmado")
 		return true, nil
 	default:
-		m.red.Println("✗ Cancelado\n")
+		m.red.Println("✗ Cancelado")
 		return false, nil
 	}
 }
@@ -108,10 +108,10 @@ func (m *Manager) ConfirmDangerousAction(action, warning string) (bool, error) {
 	response = strings.TrimSpace(response)
 
 	if response == "CONFIRMO" {
-		m.green.Println("✓ Confirmado\n")
+		m.green.Println("✓ Confirmado")
 		return true, nil
 	}
 
-	m.red.Println("✗ Cancelado por segurança\n")
+	m.red.Println("✗ Cancelado por segurança")
 	return false, nil
 }

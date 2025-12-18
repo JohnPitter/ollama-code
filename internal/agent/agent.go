@@ -133,7 +133,7 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 	a.mu.Unlock()
 
 	// Mostrar resposta
-	a.colorGreen.Println("\n🤖 Assistente:\n")
+	a.colorGreen.Println("\n🤖 Assistente:")
 	fmt.Println(response)
 	fmt.Println()
 

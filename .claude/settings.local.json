@@ -10,7 +10,11 @@
       "Bash(chmod +x C:/Users/joaop/Desenvolvimento/ollama-code/build.sh)",
       "Bash(./build.sh:*)",
       "Bash(/c/Program Files/Go/bin/go mod:*)",
-      "Bash(./build/ollama-code:*)"
+      "Bash(./build/ollama-code:*)",
+      "Bash(curl:*)",
+      "Bash(where:*)",
+      "Bash(ollama pull:*)",
+      "Bash(go vet:*)"
     ],
     "deny": [],
     "ask": []
