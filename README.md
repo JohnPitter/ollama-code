@@ -78,32 +78,104 @@ Executar? [y/N]: y
 
 ---
 
-## 🚀 Instalação Rápida
+## 🚀 Como Rodar o Projeto
 
-### 1. Instalar dependências
+### Pré-requisitos
 
-**Go:**
-```bash
-# Linux
-wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
-echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-source ~/.bashrc
+1. **Go 1.21+** instalado
+2. **Ollama** instalado e rodando
+3. **Modelo Ollama** baixado
 
-# Windows: Baixar de https://go.dev/dl/
-# macOS: brew install go@1.21
-```
+### Instalação Rápida (3 passos)
 
-**Ollama:**
+#### 1️⃣ Instalar Ollama
+
 ```bash
 # Linux
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# Windows: Baixar de https://ollama.ai/download/windows
-# macOS: brew install ollama
+# Windows
+# Baixe e instale de: https://ollama.ai/download/windows
+
+# macOS
+brew install ollama
 ```
 
-### 2. Configurar GPU
+Inicie o serviço Ollama:
+```bash
+ollama serve
+```
+
+#### 2️⃣ Baixar um modelo
+
+```bash
+# Modelo recomendado para começar (4.7GB)
+ollama pull qwen2.5-coder:7b
+
+# Ou modelos mais poderosos (se tiver GPU com 16GB+ VRAM)
+ollama pull qwen2.5-coder:14b-instruct-q5_K_M  # 9.9GB
+ollama pull qwen2.5-coder:32b-instruct-q6_K    # 21GB
+```
+
+#### 3️⃣ Compilar e Executar
+
+```bash
+# Clone o repositório
+git clone https://github.com/JohnPitter/ollama-code.git
+cd ollama-code
+
+# Compile a aplicação
+./build.sh          # Linux/macOS
+# ou
+.\build.bat         # Windows
+
+# Execute!
+./build/ollama-code chat
+```
+
+**Pronto!** A aplicação irá:
+- ✅ Detectar automaticamente seu hardware
+- ✅ Criar configuração otimizada em `~/.ollama-code/config.json`
+- ✅ Iniciar o modo chat interativo
+
+### Comandos Disponíveis
+
+```bash
+# Modo chat interativo (recomendado)
+./build/ollama-code chat
+
+# Fazer uma pergunta direta
+./build/ollama-code ask "como criar um loop em Go?"
+
+# Modo somente leitura (sem modificações)
+./build/ollama-code chat --mode readonly
+
+# Modo autônomo (sem confirmações)
+./build/ollama-code chat --mode autonomous
+
+# Ver ajuda completa
+./build/ollama-code help
+```
+
+### Instalação Global (Opcional)
+
+Para usar `ollama-code` de qualquer diretório:
+
+```bash
+# Linux/macOS
+sudo cp build/ollama-code /usr/local/bin/
+ollama-code chat
+
+# Windows (PowerShell como Admin)
+Copy-Item build/ollama-code.exe C:\Windows\System32\
+ollama-code chat
+```
+
+---
+
+## ⚙️ Configuração Avançada (Opcional)
+
+### Otimizar para GPU NVIDIA
 
 **Linux/macOS** (`~/.config/ollama/env.conf`):
 ```bash
@@ -122,13 +194,9 @@ export OLLAMA_MAX_VRAM=16384
 Restart-Service Ollama
 ```
 
-### 3. Baixar modelo
+### Ambiente Corporativo com Proxy
 
-```bash
-ollama pull qwen2.5-coder:32b-instruct-q6_K
-```
-
-**Ambiente corporativo com proxy?** Use os scripts de download direto:
+Use os scripts de download direto:
 ```bash
 # Linux/macOS
 chmod +x download-models-direct.sh
@@ -138,53 +206,21 @@ chmod +x download-models-direct.sh
 .\download-models-direct.ps1
 ```
 
-### 4. Build e instalar
+### Editar Configuração
+
+A aplicação cria automaticamente `~/.ollama-code/config.json` na primeira execução.
+Para customizar, edite o arquivo ou veja [CONFIG.md](CONFIG.md)
+
+---
+
+## 📖 Uso
+
+### Primeira Execução - Detecção Automática de Hardware
+
+Na primeira vez que você executar o Ollama Code:
 
 ```bash
-# Clone/baixe o projeto
-cd ollama-code
-
-# Build
-make build
-# ou (se não tiver make):
-./build.sh          # Linux/macOS
-.\build.bat         # Windows
-
-# Instalar globalmente
-make install
-```
-
-Pronto! Agora você pode usar:
-```bash
-ollama-code chat
-```
-
-### 5. Primeira Execução - Hardware Auto-Detection 🆕
-
-Na primeira vez que você executar o Ollama Code, ele irá:
-
-1. **Detectar automaticamente seu hardware**:
-   - CPU (modelo, cores, threads)
-   - RAM (total e disponível)
-   - GPU NVIDIA (modelo, VRAM, quantidade)
-   - Espaço em disco
-   - Sistema operacional
-
-2. **Classificar sua máquina** em um tier de performance:
-   - **High-end**: 32GB+ RAM, GPU 16GB+, 8+ cores
-   - **Mid-range**: 16GB+ RAM, GPU 8GB+, 4+ cores
-   - **Entry**: 8GB+ RAM
-   - **Low-end**: < 8GB RAM
-
-3. **Aplicar automaticamente o melhor preset**:
-   - **Ultra**: Para high-end (modelo 32B, todas as otimizações)
-   - **Performance**: Para mid-range (modelo 14B-32B, balanceado)
-   - **Compatibility**: Para entry/low-end (modelo 7B, mínimo de recursos)
-
-4. **Gerar e salvar** `~/.ollama-code/config.json` otimizado
-
-```bash
-$ ollama-code chat
+$ ./build/ollama-code chat
 
 🔍 First run detected - Analyzing your hardware...
 
@@ -193,36 +229,36 @@ $ ollama-code chat
 ╚════════════════════════════════════════════════════════════╝
 
 🖥️  HARDWARE DETECTED:
-   CPU: Intel(R) Core(TM) i9-14900K
-   Cores/Threads: 24 / 32
-   RAM: 65536 MB total (52428 MB available)
-   GPU: NVIDIA RTX Ada 2000
-   VRAM: 16384 MB (1 GPU(s))
-   Disk Space: 512 GB available
+   CPU: AMD Ryzen 5 5600 6-Core Processor
+   Cores/Threads: 12 / 12
+   RAM: 32694 MB total (14494 MB available)
+   GPU: NVIDIA GeForce RTX 4070
+   VRAM: 12282 MB (1 GPU(s))
    OS: windows / amd64
 
-⚡ PERFORMANCE TIER: high-end
+⚡ PERFORMANCE TIER: mid-range
 
-🎯 PRESET SELECTED: ultra
-   Ultra - Máxima performance, requer hardware potente (modelo 32B)
+🎯 PRESET SELECTED: performance
+   Performance - Balanceamento entre velocidade e compatibilidade
 
 ⚙️  OPTIMIZED CONFIGURATION:
-   Model: qwen2.5-coder:32b-instruct-q6_K
-   GPU Layers: 999 (all)
-   Max VRAM: 15564 MB (95% of available)
-   Parallel Requests: 6
-   Flash Attention: true
-   Checkpoints: true (retention: 30 days, max: 100)
+   Model: qwen2.5-coder:14b-instruct-q5_K_M
+   Temperature: 0.7
+   GPU Layers: 35
+   Max VRAM: 9825 MB
+   Sessions: enabled
+   Cache: enabled (15 min)
 
 ✅ Configuration optimized for your hardware!
    Config saved to: ~/.ollama-code/config.json
 ```
 
-**Quer customizar?** Edite `~/.ollama-code/config.json` ou veja [CONFIG.md](CONFIG.md)
-
----
-
-## 📖 Uso
+A aplicação automaticamente:
+- ✅ Detecta CPU, RAM, GPU e VRAM disponíveis
+- ✅ Classifica seu hardware (high-end, mid-range, entry, low-end)
+- ✅ Seleciona o melhor preset (ultra, performance, compatibility)
+- ✅ Gera configuração otimizada
+- ✅ Salva em `~/.ollama-code/config.json`
 
 ### Modo Interativo (Padrão)
 
