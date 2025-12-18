@@ -60,13 +60,13 @@ func DefaultConfig() *Config {
 	return &Config{
 		Ollama: OllamaConfig{
 			URL:            "http://localhost:11434",
-			Model:          "qwen2.5-coder:32b-instruct-q6_K",
+			Model:          "qwen2.5-coder:7b",
 			Temperature:    0.7,
 			MaxTokens:      4096,
-			GPULayers:      999,
+			GPULayers:      35,
 			NumGPU:         1,
-			MaxVRAM:        16384,
-			NumParallel:    4,
+			MaxVRAM:        8192,
+			NumParallel:    2,
 			FlashAttention: true,
 		},
 		App: AppConfig{

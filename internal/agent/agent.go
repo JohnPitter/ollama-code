@@ -62,7 +62,7 @@ func NewAgent(cfg Config) (*Agent, error) {
 		cfg.OllamaURL = "http://localhost:11434"
 	}
 	if cfg.Model == "" {
-		cfg.Model = "qwen2.5-coder:32b-instruct-q6_K"
+		cfg.Model = "qwen2.5-coder:7b"
 	}
 	if cfg.WorkDir == "" {
 		cfg.WorkDir, _ = os.Getwd()

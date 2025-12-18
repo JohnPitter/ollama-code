@@ -16,7 +16,9 @@
       "Bash(ollama pull:*)",
       "Bash(go vet:*)",
       "Bash(go test:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Bash(ollama list:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

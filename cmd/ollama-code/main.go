@@ -54,7 +54,7 @@ func main() {
 		Run:   runAsk,
 	}
 
-	askCmd.Flags().StringVar(&flagModel, "model", "qwen2.5-coder:32b-instruct-q6_K", "Ollama model to use")
+	askCmd.Flags().StringVar(&flagModel, "model", "qwen2.5-coder:7b", "Ollama model to use")
 	askCmd.Flags().StringVar(&flagURL, "url", "http://localhost:11434", "Ollama server URL")
 
 	rootCmd.AddCommand(chatCmd, askCmd)
