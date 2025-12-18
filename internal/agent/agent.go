@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/johnpitter/ollama-code/internal/cache"
 	"github.com/johnpitter/ollama-code/internal/commands"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
+	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
 )
@@ -26,6 +28,8 @@ type Agent struct {
 	commandRegistry *commands.Registry
 	confirmManager  *confirmation.Manager
 	webSearch       *websearch.Orchestrator
+	sessionManager  *session.Manager
+	cache           *cache.Manager
 	mode            modes.OperationMode
 	workDir         string
 	history         []llm.Message
@@ -40,12 +44,15 @@ type Agent struct {
 
 // Config configuração do agente
 type Config struct {
-	OllamaURL   string
-	Model       string
-	Mode        modes.OperationMode
-	WorkDir     string
-	Temperature float64
-	MaxTokens   int
+	OllamaURL        string
+	Model            string
+	Mode             modes.OperationMode
+	WorkDir          string
+	Temperature      float64
+	MaxTokens        int
+	EnableSessions   bool
+	EnableCache      bool
+	CacheTTL         time.Duration
 }
 
 // NewAgent cria novo agente
@@ -63,12 +70,28 @@ func NewAgent(cfg Config) (*Agent, error) {
 	if cfg.Mode == "" {
 		cfg.Mode = modes.ModeInteractive
 	}
+	if cfg.CacheTTL == 0 {
+		cfg.CacheTTL = 5 * time.Minute // Default 5 minutes
+	}
 
 	// Criar LLM client
 	llmClient := llm.NewClient(cfg.OllamaURL, cfg.Model)
 
 	// Criar detector de intenções
 	intentDetector := intent.NewDetector(llmClient)
+
+	// Session manager (opcional)
+	var sessionMgr *session.Manager
+	if cfg.EnableSessions {
+		homeDir, _ := os.UserHomeDir()
+		sessionMgr = session.NewManager(homeDir)
+	}
+
+	// Cache (opcional)
+	var cacheMgr *cache.Manager
+	if cfg.EnableCache {
+		cacheMgr = cache.NewManager(cfg.CacheTTL)
+	}
 
 	// Criar registry de ferramentas
 	toolRegistry := tools.NewRegistry()
@@ -88,6 +111,8 @@ func NewAgent(cfg Config) (*Agent, error) {
 		commandRegistry: commands.NewRegistry(),
 		confirmManager:  confirmation.NewManager(),
 		webSearch:       websearch.NewOrchestrator(),
+		sessionManager:  sessionMgr,
+		cache:           cacheMgr,
 		mode:            cfg.Mode,
 		workDir:         cfg.WorkDir,
 		history:         []llm.Message{},
@@ -98,6 +123,16 @@ func NewAgent(cfg Config) (*Agent, error) {
 	}
 
 	return agent, nil
+}
+
+// GetSessionManager retorna o gerenciador de sessões
+func (a *Agent) GetSessionManager() *session.Manager {
+	return a.sessionManager
+}
+
+// GetCache retorna o gerenciador de cache
+func (a *Agent) GetCache() *cache.Manager {
+	return a.cache
 }
 
 // GetCommandRegistry retorna o registry de comandos

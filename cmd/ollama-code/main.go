@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/johnpitter/ollama-code/internal/agent"
@@ -141,10 +142,13 @@ func runChat(cmd *cobra.Command, args []string) {
 
 	// Criar agente
 	cfg := agent.Config{
-		OllamaURL: appConfig.Ollama.URL,
-		Model:     appConfig.Ollama.Model,
-		Mode:      modes.ParseMode(appConfig.App.Mode),
-		WorkDir:   appConfig.App.WorkDir,
+		OllamaURL:      appConfig.Ollama.URL,
+		Model:          appConfig.Ollama.Model,
+		Mode:           modes.ParseMode(appConfig.App.Mode),
+		WorkDir:        appConfig.App.WorkDir,
+		EnableSessions: appConfig.App.EnableSessions,
+		EnableCache:    appConfig.Performance.EnableCache,
+		CacheTTL:       time.Duration(appConfig.Performance.CacheTTL) * time.Minute,
 	}
 
 	ag, err := agent.NewAgent(cfg)
