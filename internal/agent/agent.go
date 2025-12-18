@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/johnpitter/ollama-code/internal/commands"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
@@ -19,15 +20,16 @@ import (
 
 // Agent agente principal
 type Agent struct {
-	llmClient      *llm.Client
-	intentDetector *intent.Detector
-	toolRegistry   *tools.Registry
-	confirmManager *confirmation.Manager
-	webSearch      *websearch.Orchestrator
-	mode           modes.OperationMode
-	workDir        string
-	history        []llm.Message
-	mu             sync.Mutex
+	llmClient       *llm.Client
+	intentDetector  *intent.Detector
+	toolRegistry    *tools.Registry
+	commandRegistry *commands.Registry
+	confirmManager  *confirmation.Manager
+	webSearch       *websearch.Orchestrator
+	mode            modes.OperationMode
+	workDir         string
+	history         []llm.Message
+	mu              sync.Mutex
 
 	// Colors
 	colorGreen  *color.Color
@@ -80,21 +82,27 @@ func NewAgent(cfg Config) (*Agent, error) {
 	toolRegistry.Register(tools.NewGitOperations(cfg.WorkDir))
 
 	agent := &Agent{
-		llmClient:      llmClient,
-		intentDetector: intentDetector,
-		toolRegistry:   toolRegistry,
-		confirmManager: confirmation.NewManager(),
-		webSearch:      websearch.NewOrchestrator(),
-		mode:           cfg.Mode,
-		workDir:        cfg.WorkDir,
-		history:        []llm.Message{},
-		colorGreen:     color.New(color.FgGreen, color.Bold),
-		colorBlue:      color.New(color.FgBlue, color.Bold),
-		colorYellow:    color.New(color.FgYellow),
-		colorRed:       color.New(color.FgRed),
+		llmClient:       llmClient,
+		intentDetector:  intentDetector,
+		toolRegistry:    toolRegistry,
+		commandRegistry: commands.NewRegistry(),
+		confirmManager:  confirmation.NewManager(),
+		webSearch:       websearch.NewOrchestrator(),
+		mode:            cfg.Mode,
+		workDir:         cfg.WorkDir,
+		history:         []llm.Message{},
+		colorGreen:      color.New(color.FgGreen, color.Bold),
+		colorBlue:       color.New(color.FgBlue, color.Bold),
+		colorYellow:     color.New(color.FgYellow),
+		colorRed:        color.New(color.FgRed),
 	}
 
 	return agent, nil
+}
+
+// GetCommandRegistry retorna o registry de comandos
+func (a *Agent) GetCommandRegistry() *commands.Registry {
+	return a.commandRegistry
 }
 
 // ProcessMessage processa mensagem do usuário

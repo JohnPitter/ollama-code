@@ -189,23 +189,48 @@ func runChat(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		// Comandos especiais
+		// Comandos especiais hardcoded (para compatibilidade)
 		switch strings.ToLower(message) {
 		case "exit", "quit":
 			blue.Println("\n👋 Até logo!")
 			return
+		}
 
+		// Verificar se é um slash command
+		cmdRegistry := ag.GetCommandRegistry()
+		if cmdRegistry.IsCommand(message) {
+			result, err := cmdRegistry.ParseAndExecute(ctx, message)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Erro no comando: %v\n", err)
+			} else if result != "" {
+				fmt.Println(result)
+			}
+			continue
+		}
+
+		// Comandos legacy sem slash (para compatibilidade)
+		switch strings.ToLower(message) {
 		case "help":
-			showHelp()
+			if result, err := cmdRegistry.Execute(ctx, "help", []string{}); err == nil {
+				fmt.Println(result)
+			} else {
+				showHelp()
+			}
 			continue
 
 		case "clear":
-			ag.ClearHistory()
-			fmt.Println("\n✓ Histórico limpo")
+			if result, err := cmdRegistry.Execute(ctx, "clear", []string{}); err == nil {
+				ag.ClearHistory()
+				fmt.Println(result)
+			}
 			continue
 
 		case "mode":
-			fmt.Printf("\nModo atual: %s (%s)\n", ag.GetMode(), ag.GetMode().Description())
+			if result, err := cmdRegistry.Execute(ctx, "mode", []string{}); err == nil {
+				fmt.Println(result)
+			} else {
+				fmt.Printf("\nModo atual: %s (%s)\n", ag.GetMode(), ag.GetMode().Description())
+			}
 			continue
 
 		case "pwd":
@@ -213,7 +238,7 @@ func runChat(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		// Processar mensagem
+		// Processar mensagem normal
 		if err := ag.ProcessMessage(ctx, message); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
@@ -246,14 +271,25 @@ func runAsk(cmd *cobra.Command, args []string) {
 
 func showHelp() {
 	blue := color.New(color.FgBlue, color.Bold)
+	yellow := color.New(color.FgYellow)
+
 	blue.Println("\n📚 Comandos Disponíveis:")
 
+	fmt.Println("\nComandos Básicos:")
 	fmt.Println("  exit/quit     - Sair do chat")
 	fmt.Println("  help          - Mostrar esta ajuda")
 	fmt.Println("  clear         - Limpar histórico")
 	fmt.Println("  mode          - Mostrar modo atual")
 	fmt.Println("  pwd           - Mostrar diretório atual")
-	fmt.Println("\n💡 Exemplos de uso:")
+
+	fmt.Println("\nSlash Commands:")
+	fmt.Println("  /help         - Mostrar todos os comandos disponíveis")
+	fmt.Println("  /clear        - Limpar histórico")
+	fmt.Println("  /history      - Mostrar histórico de conversas")
+	fmt.Println("  /status       - Mostrar status do sistema")
+	fmt.Println("  /mode [mode]  - Alterar modo de operação")
+
+	yellow.Println("\n💡 Exemplos de uso:")
 	fmt.Println("  - Leia o arquivo main.go")
 	fmt.Println("  - Mostre a estrutura do projeto")
 	fmt.Println("  - Execute os testes")

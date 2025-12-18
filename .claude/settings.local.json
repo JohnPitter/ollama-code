@@ -15,7 +15,8 @@
       "Bash(where:*)",
       "Bash(ollama pull:*)",
       "Bash(go vet:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Bash(go build:*)"
     ],
     "deny": [],
     "ask": []
