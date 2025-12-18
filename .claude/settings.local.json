@@ -14,7 +14,8 @@
       "Bash(curl:*)",
       "Bash(where:*)",
       "Bash(ollama pull:*)",
-      "Bash(go vet:*)"
+      "Bash(go vet:*)",
+      "Bash(go test:*)"
     ],
     "deny": [],
     "ask": []

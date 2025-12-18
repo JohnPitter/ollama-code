@@ -12,7 +12,7 @@ import (
 // handleReadFile processa leitura de arquivo
 func (a *Agent) handleReadFile(ctx context.Context, result *intent.DetectionResult) (string, error) {
 	filePath, ok := result.Parameters["file_path"].(string)
-	if !ok {
+	if !ok || filePath == "" {
 		return "Erro: caminho do arquivo não especificado", nil
 	}
 
@@ -25,13 +25,21 @@ func (a *Agent) handleReadFile(ctx context.Context, result *intent.DetectionResu
 		return fmt.Sprintf("Erro ao ler arquivo: %s", toolResult.Error), nil
 	}
 
-	// Formatar resposta
-	if toolResult.Data["type"] == "text" {
-		content := toolResult.Data["content"].(string)
+	// Formatar resposta com validação de tipo
+	fileType, ok := toolResult.Data["type"].(string)
+	if !ok {
+		return "Erro: tipo de arquivo inválido", nil
+	}
+
+	if fileType == "text" {
+		content, ok := toolResult.Data["content"].(string)
+		if !ok {
+			return "Erro: conteúdo do arquivo em formato inválido", nil
+		}
 		return fmt.Sprintf("Conteúdo do arquivo %s:\n\n```\n%s\n```", filePath, content), nil
 	}
 
-	return fmt.Sprintf("Arquivo %s lido com sucesso (tipo: %s)", filePath, toolResult.Data["type"]), nil
+	return fmt.Sprintf("Arquivo %s lido com sucesso (tipo: %s)", filePath, fileType), nil
 }
 
 // handleWriteFile processa escrita de arquivo
@@ -41,30 +49,74 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 		return "❌ Operação bloqueada: modo somente leitura ativo", nil
 	}
 
-	// Obter parâmetros do LLM
-	_, err := a.llmClient.Complete(ctx, []llm.Message{
-		{
-			Role: "user",
-			Content: fmt.Sprintf(`Extraia os seguintes parâmetros desta mensagem e retorne em formato JSON:
-- file_path: caminho do arquivo
-- content: conteúdo a escrever
-- mode: "create", "append" ou "replace"
+	// Extrair parâmetros do resultado da detecção ou usar LLM
+	filePath, _ := result.Parameters["file_path"].(string)
+	content, _ := result.Parameters["content"].(string)
+	mode, _ := result.Parameters["mode"].(string)
 
-Mensagem: "%s"
+	// Se parâmetros não vieram da detecção, usar LLM para extrair da mensagem
+	if filePath == "" || content == "" {
+		llmResponse, err := a.llmClient.Complete(ctx, []llm.Message{
+			{
+				Role: "system",
+				Content: "Você é um assistente que extrai informações de solicitações de escrita de arquivo. " +
+					"Responda APENAS com JSON no formato: {\"file_path\": \"caminho\", \"content\": \"conteúdo\", \"mode\": \"create|append|replace\"}",
+			},
+			{
+				Role: "user",
+				Content: fmt.Sprintf("Extraia os parâmetros desta solicitação: %s", userMessage),
+			},
+		}, &llm.CompletionOptions{Temperature: 0.1})
 
-Responda APENAS com JSON.`, userMessage),
-		},
-	}, &llm.CompletionOptions{Temperature: 0.1})
+		if err != nil {
+			return "Erro ao processar requisição de escrita", err
+		}
 
-	if err != nil {
-		return "Erro ao processar requisição de escrita", err
+		// Parse do JSON (simplificado - em produção usar encoding/json)
+		// Por enquanto, assumir que veio nos parâmetros ou pedir confirmação com o que temos
+		if filePath == "" {
+			return fmt.Sprintf("Erro: não consegui identificar o caminho do arquivo. Resposta LLM: %s", llmResponse), nil
+		}
+	}
+
+	// Validações
+	if filePath == "" {
+		return "Erro: caminho do arquivo não especificado", nil
+	}
+	if content == "" && mode != "replace" {
+		return "Erro: conteúdo não especificado", nil
+	}
+	if mode == "" {
+		mode = "create" // Padrão
+	}
+
+	// Preparar parâmetros para a ferramenta
+	params := map[string]interface{}{
+		"file_path": filePath,
+		"content":   content,
+		"mode":      mode,
+	}
+
+	// Se for replace, adicionar old_text e new_text
+	if mode == "replace" {
+		if oldText, ok := result.Parameters["old_text"].(string); ok {
+			params["old_text"] = oldText
+		}
+		if newText, ok := result.Parameters["new_text"].(string); ok {
+			params["new_text"] = newText
+		}
 	}
 
 	// Pedir confirmação se necessário
 	if a.mode.RequiresConfirmation() {
+		preview := fmt.Sprintf("Arquivo: %s\nModo: %s\nTamanho: %d bytes", filePath, mode, len(content))
+		if mode == "create" && len(content) < 500 {
+			preview += fmt.Sprintf("\n\nConteúdo:\n%s", content)
+		}
+
 		confirmed, err := a.confirmManager.ConfirmWithPreview(
 			"Escrever arquivo",
-			fmt.Sprintf("Arquivo: %v\nModo: %v", result.Parameters["file_path"], result.Parameters["mode"]),
+			preview,
 		)
 
 		if err != nil || !confirmed {
@@ -72,8 +124,15 @@ Responda APENAS com JSON.`, userMessage),
 		}
 	}
 
-	// Executar (simplificado - deveria fazer parse do JSON)
-	return "Funcionalidade de escrita de arquivo em desenvolvimento", nil
+	// Executar ferramenta
+	toolResult, err := a.toolRegistry.Execute(ctx, "file_writer", params)
+
+	if err != nil || !toolResult.Success {
+		return fmt.Sprintf("Erro ao escrever arquivo: %s", toolResult.Error), nil
+	}
+
+	// Formatar resposta
+	return fmt.Sprintf("✓ %s", toolResult.Message), nil
 }
 
 // handleExecuteCommand processa execução de comando
@@ -84,15 +143,18 @@ func (a *Agent) handleExecuteCommand(ctx context.Context, result *intent.Detecti
 	}
 
 	command, ok := result.Parameters["command"].(string)
-	if !ok {
+	if !ok || command == "" {
 		return "Erro: comando não especificado", nil
 	}
 
 	// Verificar se é perigoso
-	cmdTool, _ := a.toolRegistry.Get("command_executor")
+	cmdTool, err := a.toolRegistry.Get("command_executor")
+	if err != nil {
+		return "Erro interno: ferramenta command_executor não encontrada", nil
+	}
 	cmdExecutor, ok := cmdTool.(*tools.CommandExecutor)
 	if !ok {
-		return "Erro interno: ferramenta não encontrada", nil
+		return "Erro interno: tipo de ferramenta inválido", nil
 	}
 	if cmdExecutor.IsDangerous(command) {
 		if a.mode.RequiresConfirmation() {
@@ -125,9 +187,19 @@ func (a *Agent) handleExecuteCommand(ctx context.Context, result *intent.Detecti
 		return fmt.Sprintf("Erro ao executar comando: %s", toolResult.Error), nil
 	}
 
-	stdout := toolResult.Data["stdout"].(string)
-	stderr := toolResult.Data["stderr"].(string)
-	exitCode := toolResult.Data["exit_code"].(int)
+	// Validar tipo dos resultados
+	stdout, ok := toolResult.Data["stdout"].(string)
+	if !ok {
+		stdout = ""
+	}
+	stderr, ok := toolResult.Data["stderr"].(string)
+	if !ok {
+		stderr = ""
+	}
+	exitCode, ok := toolResult.Data["exit_code"].(int)
+	if !ok {
+		exitCode = -1
+	}
 
 	response := fmt.Sprintf("Comando executado (exit code: %d)\n\n", exitCode)
 	if stdout != "" {
@@ -143,7 +215,7 @@ func (a *Agent) handleExecuteCommand(ctx context.Context, result *intent.Detecti
 // handleSearchCode processa busca de código
 func (a *Agent) handleSearchCode(ctx context.Context, result *intent.DetectionResult) (string, error) {
 	query, ok := result.Parameters["query"].(string)
-	if !ok {
+	if !ok || query == "" {
 		return "Erro: termo de busca não especificado", nil
 	}
 
@@ -155,7 +227,10 @@ func (a *Agent) handleSearchCode(ctx context.Context, result *intent.DetectionRe
 		return fmt.Sprintf("Erro ao buscar código: %s", toolResult.Error), nil
 	}
 
-	count := toolResult.Data["count"].(int)
+	count, ok := toolResult.Data["count"].(int)
+	if !ok {
+		count = 0
+	}
 	return fmt.Sprintf("Encontrados %d resultados para '%s'", count, query), nil
 }
 
@@ -209,7 +284,7 @@ func (a *Agent) handleGitOperation(ctx context.Context, result *intent.Detection
 // handleWebSearch processa pesquisa web
 func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionResult) (string, error) {
 	query, ok := result.Parameters["query"].(string)
-	if !ok {
+	if !ok || query == "" {
 		return "Erro: termo de busca não especificado", nil
 	}
 
