@@ -1,0 +1,67 @@
+# Binaries
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+ollama-code
+ollama-code.exe
+
+# Test binaries
+*.test
+*.out
+*.prof
+
+# Go workspace file
+go.work
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config files with sensitive data
+config.json
+.env
+*.key
+*.pem
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+*.cache
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+*.coverprofile
+coverage.html
+coverage.txt
+
+# Build artifacts
+dist/
+release/
+
+# Dependencies
+vendor/
+
+# User-specific
+.ollama-code/
+.local/
+
+# Backup files
+*.bak
+*.backup
+*~
