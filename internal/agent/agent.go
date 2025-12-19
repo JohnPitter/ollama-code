@@ -15,6 +15,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
+	"github.com/johnpitter/ollama-code/internal/ollamamd"
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
 	"github.com/johnpitter/ollama-code/internal/statusline"
@@ -34,6 +35,7 @@ type Agent struct {
 	sessionManager  *session.Manager
 	cache           *cache.Manager
 	statusLine      *statusline.StatusLine
+	ollamaContext   *ollamamd.OllamaContext
 	mode            modes.OperationMode
 	workDir         string
 	history         []llm.Message
@@ -136,6 +138,16 @@ func NewAgent(cfg Config) (*Agent, error) {
 	skillRegistry.Register(skills.NewAPISkill())
 	skillRegistry.Register(skills.NewCodeAnalysisSkill())
 
+	// Carregar contexto OLLAMA.md hierárquico
+	ollamaMDLoader := ollamamd.NewLoader(cfg.WorkDir)
+	ollamaContext, err := ollamaMDLoader.Load()
+	if err != nil {
+		// Log mas não falhe - OLLAMA.md é opcional
+		fmt.Printf("⚠️  Aviso: Não foi possível carregar OLLAMA.md: %v\n", err)
+	} else if len(ollamaContext.Files) > 0 {
+		fmt.Printf("📋 Carregados %d arquivo(s) OLLAMA.md\n", len(ollamaContext.Files))
+	}
+
 	agent := &Agent{
 		llmClient:       llmClient,
 		intentDetector:  intentDetector,
@@ -147,6 +159,7 @@ func NewAgent(cfg Config) (*Agent, error) {
 		sessionManager:  sessionMgr,
 		cache:           cacheMgr,
 		statusLine:      statusLineMgr,
+		ollamaContext:   ollamaContext,
 		mode:            cfg.Mode,
 		workDir:         cfg.WorkDir,
 		history:         []llm.Message{},
