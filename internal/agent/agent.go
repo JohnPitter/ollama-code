@@ -16,6 +16,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
 	"github.com/johnpitter/ollama-code/internal/session"
+	"github.com/johnpitter/ollama-code/internal/statusline"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
 )
@@ -30,6 +31,7 @@ type Agent struct {
 	webSearch       *websearch.Orchestrator
 	sessionManager  *session.Manager
 	cache           *cache.Manager
+	statusLine      *statusline.StatusLine
 	mode            modes.OperationMode
 	workDir         string
 	history         []llm.Message
@@ -52,6 +54,7 @@ type Config struct {
 	MaxTokens        int
 	EnableSessions   bool
 	EnableCache      bool
+	EnableStatusLine bool
 	CacheTTL         time.Duration
 }
 
@@ -93,6 +96,25 @@ func NewAgent(cfg Config) (*Agent, error) {
 		cacheMgr = cache.NewManager(cfg.CacheTTL)
 	}
 
+	// Status Line (opcional)
+	var statusLineMgr *statusline.StatusLine
+	if cfg.EnableStatusLine {
+		maxTokens := cfg.MaxTokens
+		if maxTokens == 0 {
+			maxTokens = 4096
+		}
+		statusLineMgr = statusline.New(statusline.Config{
+			Model:      cfg.Model,
+			Mode:       string(cfg.Mode),
+			WorkDir:    cfg.WorkDir,
+			MaxTokens:  maxTokens,
+			ShowTokens: true,
+			ShowTime:   true,
+			ShowTask:   true,
+			Enabled:    true,
+		})
+	}
+
 	// Criar registry de ferramentas
 	toolRegistry := tools.NewRegistry()
 
@@ -113,6 +135,7 @@ func NewAgent(cfg Config) (*Agent, error) {
 		webSearch:       websearch.NewOrchestrator(),
 		sessionManager:  sessionMgr,
 		cache:           cacheMgr,
+		statusLine:      statusLineMgr,
 		mode:            cfg.Mode,
 		workDir:         cfg.WorkDir,
 		history:         []llm.Message{},

@@ -3,10 +3,12 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/tools"
+	"github.com/johnpitter/ollama-code/internal/websearch"
 )
 
 // handleReadFile processa leitura de arquivo
@@ -300,36 +302,99 @@ func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionRes
 		return "Nenhum resultado encontrado na web.", nil
 	}
 
-	// Formatar resultados para o LLM sintetizar
-	resultsText := fmt.Sprintf("Encontrei %d resultados para '%s':\n\n", len(results), query)
+	a.colorBlue.Printf("📄 Buscando conteúdo de %d sites...\n", min(len(results), 3))
+
+	// Fazer fetch do conteúdo real dos top 3 resultados
+	fetchedContents, err := a.webSearch.FetchContents(ctx, results, 3)
+	if err != nil {
+		// Fallback para snippets se fetch falhar
+		return a.synthesizeFromSnippets(ctx, userMessage, results)
+	}
+
+	// Construir contexto com conteúdo completo
+	var contextBuilder strings.Builder
+	contextBuilder.WriteString(fmt.Sprintf("Resultados da pesquisa para '%s':\n\n", query))
+
+	validContents := 0
+	for i, content := range fetchedContents {
+		if content.Error != "" || content.Content == "" {
+			continue
+		}
+		validContents++
+		contextBuilder.WriteString(fmt.Sprintf("=== Fonte %d: %s ===\n", i+1, content.Title))
+		contextBuilder.WriteString(fmt.Sprintf("URL: %s\n\n", content.URL))
+		contextBuilder.WriteString(content.Content)
+		contextBuilder.WriteString("\n\n")
+	}
+
+	if validContents == 0 {
+		// Fallback para snippets se nenhum conteúdo foi obtido
+		return a.synthesizeFromSnippets(ctx, userMessage, results)
+	}
+
+	// Usar LLM para sintetizar resposta com conteúdo completo
+	prompt := fmt.Sprintf(`Com base no conteúdo real dos sites abaixo, responda à pergunta: "%s"
+
+%s
+
+Forneça uma resposta clara, precisa e bem fundamentada. Cite as fontes quando relevante.`, userMessage, contextBuilder.String())
+
+	a.colorGreen.Println("\n🤖 Assistente:")
+
+	response, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
+		{Role: "user", Content: prompt},
+	}, &llm.CompletionOptions{
+		Temperature: 0.7,
+		MaxTokens:   1500,
+	}, func(chunk string) {
+		fmt.Print(chunk)
+	})
+
+	fmt.Println()
+
+	if err != nil {
+		return contextBuilder.String(), nil
+	}
+
+	return response, nil
+}
+
+// synthesizeFromSnippets sintetiza resposta apenas com snippets (fallback)
+func (a *Agent) synthesizeFromSnippets(ctx context.Context, userMessage string, results []websearch.SearchResult) (string, error) {
+	resultsText := "Resultados da pesquisa:\n\n"
 	for i, r := range results {
-		if i >= 3 { // Limitar a 3 resultados
+		if i >= 3 {
 			break
 		}
 		resultsText += fmt.Sprintf("%d. %s\n   %s\n   URL: %s\n\n", i+1, r.Title, r.Snippet, r.URL)
 	}
 
-	// Usar LLM para sintetizar a resposta baseada nos resultados
-	prompt := fmt.Sprintf(`Com base nos resultados da pesquisa abaixo, responda à pergunta do usuário: "%s"
+	prompt := fmt.Sprintf(`Com base nos snippets de pesquisa abaixo, responda: "%s"
 
 %s
 
-Forneça uma resposta clara e concisa baseada nas informações encontradas. Se relevante, cite as fontes.`, userMessage, resultsText)
+Resposta:`, userMessage, resultsText)
 
-	messages := []llm.Message{
+	response, err := a.llmClient.Complete(ctx, []llm.Message{
 		{Role: "user", Content: prompt},
-	}
-
-	response, err := a.llmClient.Complete(ctx, messages, &llm.CompletionOptions{
+	}, &llm.CompletionOptions{
 		Temperature: 0.7,
 		MaxTokens:   1000,
 	})
+
 	if err != nil {
-		// Se falhar, retornar apenas os resultados formatados
 		return resultsText, nil
 	}
 
 	return response, nil
+}
+
+// min retorna o menor de dois inteiros
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // handleQuestion processa pergunta simples

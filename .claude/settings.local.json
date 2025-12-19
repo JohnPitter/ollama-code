@@ -20,7 +20,8 @@
       "Bash(ollama list:*)",
       "Bash(cat:*)",
       "Bash(timeout 60 ./build/ollama-code:*)",
-      "Bash(timeout 90 ./build/ollama-code:*)"
+      "Bash(timeout 90 ./build/ollama-code:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

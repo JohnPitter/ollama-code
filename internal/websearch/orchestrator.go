@@ -12,8 +12,9 @@ import (
 
 // Orchestrator orquestrador de pesquisas web
 type Orchestrator struct {
-	client *http.Client
-	cache  map[string][]SearchResult
+	client  *http.Client
+	fetcher *ContentFetcher
+	cache   map[string][]SearchResult
 }
 
 // SearchResult resultado de pesquisa
@@ -30,7 +31,8 @@ func NewOrchestrator() *Orchestrator {
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		cache: make(map[string][]SearchResult),
+		fetcher: NewContentFetcher(),
+		cache:   make(map[string][]SearchResult),
 	}
 }
 
@@ -214,4 +216,29 @@ func (o *Orchestrator) searchStackOverflow(query string) ([]SearchResult, error)
 // ClearCache limpa o cache de pesquisas
 func (o *Orchestrator) ClearCache() {
 	o.cache = make(map[string][]SearchResult)
+}
+
+// FetchContents busca conteúdo real das URLs dos resultados de pesquisa
+func (o *Orchestrator) FetchContents(ctx context.Context, results []SearchResult, maxResults int) ([]FetchedContent, error) {
+	if maxResults <= 0 || maxResults > len(results) {
+		maxResults = len(results)
+	}
+
+	// Extrair URLs dos top resultados
+	urls := make([]string, maxResults)
+	for i := 0; i < maxResults; i++ {
+		urls[i] = results[i].URL
+	}
+
+	// Buscar conteúdo em paralelo
+	contents := o.fetcher.FetchMultiple(ctx, urls, 3)
+
+	// Adicionar títulos dos resultados originais caso o fetch não tenha conseguido extrair
+	for i := range contents {
+		if contents[i].Title == "Sem título" && i < len(results) {
+			contents[i].Title = results[i].Title
+		}
+	}
+
+	return contents, nil
 }
