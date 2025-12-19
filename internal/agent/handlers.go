@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -51,42 +52,82 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 		return "❌ Operação bloqueada: modo somente leitura ativo", nil
 	}
 
-	// Extrair parâmetros do resultado da detecção ou usar LLM
+	// Extrair parâmetros do resultado da detecção
 	filePath, _ := result.Parameters["file_path"].(string)
 	content, _ := result.Parameters["content"].(string)
 	mode, _ := result.Parameters["mode"].(string)
 
-	// Se parâmetros não vieram da detecção, usar LLM para extrair da mensagem
-	if filePath == "" || content == "" {
+	// Se conteúdo não foi especificado, significa que o usuário quer que geremos
+	if content == "" {
+		a.colorBlue.Println("💭 Gerando conteúdo...")
+
+		// Usar LLM para gerar o conteúdo baseado na descrição do usuário
+		generationPrompt := fmt.Sprintf(`Você é um assistente de programação. O usuário pediu:
+
+"%s"
+
+TAREFA:
+1. Identifique o tipo de arquivo que o usuário quer criar
+2. Identifique o nome/caminho do arquivo (se não especificado, sugira um apropriado)
+3. Gere o conteúdo completo do arquivo conforme solicitado
+
+Responda APENAS com um JSON no seguinte formato:
+{
+  "file_path": "caminho/do/arquivo.ext",
+  "content": "conteúdo completo do arquivo aqui",
+  "mode": "create"
+}
+
+IMPORTANTE:
+- O campo "content" deve conter TODO o código/conteúdo solicitado
+- Use boas práticas de código
+- Adicione comentários quando apropriado
+- Se for HTML/CSS, crie algo visualmente atraente
+- Não inclua explicações fora do JSON`, userMessage)
+
 		llmResponse, err := a.llmClient.Complete(ctx, []llm.Message{
-			{
-				Role: "system",
-				Content: "Você é um assistente que extrai informações de solicitações de escrita de arquivo. " +
-					"Responda APENAS com JSON no formato: {\"file_path\": \"caminho\", \"content\": \"conteúdo\", \"mode\": \"create|append|replace\"}",
-			},
-			{
-				Role: "user",
-				Content: fmt.Sprintf("Extraia os parâmetros desta solicitação: %s", userMessage),
-			},
-		}, &llm.CompletionOptions{Temperature: 0.1})
+			{Role: "user", Content: generationPrompt},
+		}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 3000})
 
 		if err != nil {
-			return "Erro ao processar requisição de escrita", err
+			return "Erro ao gerar conteúdo", err
 		}
 
-		// Parse do JSON (simplificado - em produção usar encoding/json)
-		// Por enquanto, assumir que veio nos parâmetros ou pedir confirmação com o que temos
-		if filePath == "" {
-			return fmt.Sprintf("Erro: não consegui identificar o caminho do arquivo. Resposta LLM: %s", llmResponse), nil
+		// Extrair JSON da resposta (LLM pode retornar com ```json ou direto)
+		jsonStr := strings.TrimSpace(llmResponse)
+		jsonStr = strings.TrimPrefix(jsonStr, "```json")
+		jsonStr = strings.TrimPrefix(jsonStr, "```")
+		jsonStr = strings.TrimSuffix(jsonStr, "```")
+		jsonStr = strings.TrimSpace(jsonStr)
+
+		// Parse do JSON
+		var parsed map[string]interface{}
+		if err := parseJSON(jsonStr, &parsed); err != nil {
+			// Fallback: tentar usar a resposta diretamente como conteúdo
+			a.colorYellow.Printf("⚠️  Não foi possível fazer parse do JSON, tentando abordagem alternativa...\n")
+
+			// Se não parseou, tenta gerar novamente de forma mais simples
+			return a.generateAndWriteFileSimple(ctx, userMessage)
+		}
+
+		// Extrair campos do JSON
+		if fp, ok := parsed["file_path"].(string); ok && fp != "" {
+			filePath = fp
+		}
+		if c, ok := parsed["content"].(string); ok && c != "" {
+			content = c
+		}
+		if m, ok := parsed["mode"].(string); ok && m != "" {
+			mode = m
 		}
 	}
 
-	// Validações
+	// Validações finais
 	if filePath == "" {
-		return "Erro: caminho do arquivo não especificado", nil
+		return "Erro: não foi possível determinar o caminho do arquivo", nil
 	}
 	if content == "" && mode != "replace" {
-		return "Erro: conteúdo não especificado", nil
+		return "Erro: não foi possível gerar o conteúdo solicitado", nil
 	}
 	if mode == "" {
 		mode = "create" // Padrão
@@ -221,6 +262,8 @@ func (a *Agent) handleSearchCode(ctx context.Context, result *intent.DetectionRe
 		return "Erro: termo de busca não especificado", nil
 	}
 
+	a.colorBlue.Printf("🔍 Buscando por: %s\n", query)
+
 	toolResult, err := a.toolRegistry.Execute(ctx, "code_searcher", map[string]interface{}{
 		"query": query,
 	})
@@ -233,11 +276,41 @@ func (a *Agent) handleSearchCode(ctx context.Context, result *intent.DetectionRe
 	if !ok {
 		count = 0
 	}
-	return fmt.Sprintf("Encontrados %d resultados para '%s'", count, query), nil
+
+	if count == 0 {
+		return fmt.Sprintf("Nenhum resultado encontrado para '%s'", query), nil
+	}
+
+	// Construir resposta com os resultados
+	var response strings.Builder
+	response.WriteString(fmt.Sprintf("Encontrados %d resultado(s) para '%s'\n\n", count, query))
+
+	// Mostrar resultados se disponíveis
+	if matches, ok := toolResult.Data["matches"].([]interface{}); ok && len(matches) > 0 {
+		maxResults := min(len(matches), 10) // Limitar a 10 resultados
+		for i := 0; i < maxResults; i++ {
+			if match, ok := matches[i].(map[string]interface{}); ok {
+				file, _ := match["file"].(string)
+				line, _ := match["line"].(int)
+				text, _ := match["text"].(string)
+
+				response.WriteString(fmt.Sprintf("📄 %s:%d\n", file, line))
+				response.WriteString(fmt.Sprintf("   %s\n\n", strings.TrimSpace(text)))
+			}
+		}
+
+		if count > 10 {
+			response.WriteString(fmt.Sprintf("... e mais %d resultado(s)\n", count-10))
+		}
+	}
+
+	return response.String(), nil
 }
 
 // handleAnalyzeProject processa análise de projeto
 func (a *Agent) handleAnalyzeProject(ctx context.Context, result *intent.DetectionResult) (string, error) {
+	a.colorBlue.Println("📊 Analisando estrutura do projeto...")
+
 	toolResult, err := a.toolRegistry.Execute(ctx, "project_analyzer", map[string]interface{}{
 		"type": "structure",
 	})
@@ -246,7 +319,37 @@ func (a *Agent) handleAnalyzeProject(ctx context.Context, result *intent.Detecti
 		return fmt.Sprintf("Erro ao analisar projeto: %s", toolResult.Error), nil
 	}
 
-	return "Estrutura do projeto analisada com sucesso", nil
+	// Construir resposta com informações da análise
+	var response strings.Builder
+	response.WriteString("📊 Análise da Estrutura do Projeto\n\n")
+
+	// Mostrar informações básicas
+	if projectName, ok := toolResult.Data["project_name"].(string); ok {
+		response.WriteString(fmt.Sprintf("📦 Projeto: %s\n", projectName))
+	}
+
+	if fileCount, ok := toolResult.Data["file_count"].(int); ok {
+		response.WriteString(fmt.Sprintf("📄 Arquivos: %d\n", fileCount))
+	}
+
+	if dirCount, ok := toolResult.Data["directory_count"].(int); ok {
+		response.WriteString(fmt.Sprintf("📁 Diretórios: %d\n", dirCount))
+	}
+
+	if languages, ok := toolResult.Data["languages"].([]interface{}); ok && len(languages) > 0 {
+		response.WriteString("\n🔤 Linguagens detectadas:\n")
+		for _, lang := range languages {
+			if langStr, ok := lang.(string); ok {
+				response.WriteString(fmt.Sprintf("   • %s\n", langStr))
+			}
+		}
+	}
+
+	if structure, ok := toolResult.Data["structure"].(string); ok && structure != "" {
+		response.WriteString(fmt.Sprintf("\n📂 Estrutura:\n%s\n", structure))
+	}
+
+	return response.String(), nil
 }
 
 // handleGitOperation processa operação git
@@ -461,4 +564,101 @@ func (a *Agent) handleQuestion(ctx context.Context, userMessage string) (string,
 	}
 
 	return response, nil
+}
+
+// parseJSON faz parse de string JSON em um map usando encoding/json
+func parseJSON(jsonStr string, result *map[string]interface{}) error {
+	err := json.Unmarshal([]byte(jsonStr), result)
+	if err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Validar se tem file_path
+	if _, ok := (*result)["file_path"]; !ok {
+		return fmt.Errorf("JSON missing required field: file_path")
+	}
+
+	return nil
+}
+
+// generateAndWriteFileSimple método simplificado para gerar e escrever arquivo (fallback)
+func (a *Agent) generateAndWriteFileSimple(ctx context.Context, userMessage string) (string, error) {
+	a.colorYellow.Println("🔄 Tentando método alternativo de geração...")
+
+	// Prompt mais direto
+	prompt := fmt.Sprintf(`O usuário pediu: "%s"
+
+Gere o código/conteúdo completo solicitado.
+Comece sua resposta com o nome do arquivo na primeira linha (ex: index.html).
+Depois, nas linhas seguintes, coloque todo o conteúdo do arquivo.`, userMessage)
+
+	response, err := a.llmClient.Complete(ctx, []llm.Message{
+		{Role: "user", Content: prompt},
+	}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 3000})
+
+	if err != nil {
+		return "Erro ao gerar conteúdo", err
+	}
+
+	// Tentar extrair nome do arquivo da primeira linha
+	lines := strings.Split(response, "\n")
+	if len(lines) < 2 {
+		return "Erro: resposta inválida do modelo", nil
+	}
+
+	filePath := strings.TrimSpace(lines[0])
+	content := strings.Join(lines[1:], "\n")
+
+	// Limpar possíveis marcadores markdown
+	filePath = strings.TrimPrefix(filePath, "# ")
+	filePath = strings.TrimPrefix(filePath, "Arquivo: ")
+	content = strings.TrimPrefix(content, "```html")
+	content = strings.TrimPrefix(content, "```css")
+	content = strings.TrimPrefix(content, "```")
+	content = strings.TrimSuffix(content, "```")
+	content = strings.TrimSpace(content)
+
+	// Validar
+	if filePath == "" || content == "" {
+		return fmt.Sprintf("Erro: não foi possível gerar arquivo.\nResposta do modelo:\n%s", response), nil
+	}
+
+	// Mostrar preview
+	preview := fmt.Sprintf("Arquivo: %s\nTamanho: %d bytes\n\nPreview (primeiras linhas):\n%s",
+		filePath, len(content), truncate(content, 500))
+
+	a.colorGreen.Printf("\n📄 Conteúdo gerado:\n%s\n\n", preview)
+
+	// Confirmar
+	if a.mode.RequiresConfirmation() {
+		confirmed, err := a.confirmManager.ConfirmWithPreview(
+			"Criar arquivo",
+			preview,
+		)
+
+		if err != nil || !confirmed {
+			return "✗ Operação cancelada pelo usuário", nil
+		}
+	}
+
+	// Escrever arquivo
+	toolResult, err := a.toolRegistry.Execute(ctx, "file_writer", map[string]interface{}{
+		"file_path": filePath,
+		"content":   content,
+		"mode":      "create",
+	})
+
+	if err != nil || !toolResult.Success {
+		return fmt.Sprintf("Erro ao escrever arquivo: %s", toolResult.Error), nil
+	}
+
+	return fmt.Sprintf("✓ %s", toolResult.Message), nil
+}
+
+// truncate trunca string para tamanho máximo
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
