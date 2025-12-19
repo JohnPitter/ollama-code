@@ -39,6 +39,7 @@ type Agent struct {
 	mode            modes.OperationMode
 	workDir         string
 	history         []llm.Message
+	recentFiles     []string // Arquivos criados/modificados recentemente
 	mu              sync.Mutex
 
 	// Colors
@@ -163,6 +164,7 @@ func NewAgent(cfg Config) (*Agent, error) {
 		mode:            cfg.Mode,
 		workDir:         cfg.WorkDir,
 		history:         []llm.Message{},
+		recentFiles:     []string{},
 		colorGreen:      color.New(color.FgGreen, color.Bold),
 		colorBlue:       color.New(color.FgBlue, color.Bold),
 		colorYellow:     color.New(color.FgYellow),
@@ -338,4 +340,25 @@ func (a *Agent) SetWorkDir(dir string) error {
 
 	a.workDir = absDir
 	return nil
+}
+
+// AddRecentFile adiciona arquivo à lista de arquivos recentes
+func (a *Agent) AddRecentFile(filePath string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// Adicionar no início da lista
+	a.recentFiles = append([]string{filePath}, a.recentFiles...)
+
+	// Manter apenas últimos 10 arquivos
+	if len(a.recentFiles) > 10 {
+		a.recentFiles = a.recentFiles[:10]
+	}
+}
+
+// GetRecentlyModifiedFiles retorna arquivos recentemente modificados
+func (a *Agent) GetRecentlyModifiedFiles() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return append([]string{}, a.recentFiles...)
 }

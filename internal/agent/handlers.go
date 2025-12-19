@@ -57,6 +57,15 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 	content, _ := result.Parameters["content"].(string)
 	mode, _ := result.Parameters["mode"].(string)
 
+	// Detectar se é uma correção de arquivo recente
+	recentlyModified := a.GetRecentlyModifiedFiles()
+	isBugFix := detectBugReport(userMessage)
+
+	if isBugFix && len(recentlyModified) > 0 {
+		// Usuário reportou problema em arquivo recente
+		return a.handleBugFix(ctx, userMessage, recentlyModified[0])
+	}
+
 	// Se conteúdo não foi especificado, significa que o usuário quer que geremos
 	if content == "" {
 		a.colorBlue.Println("💭 Gerando conteúdo...")
@@ -173,6 +182,9 @@ IMPORTANTE:
 	if err != nil || !toolResult.Success {
 		return fmt.Sprintf("Erro ao escrever arquivo: %s", toolResult.Error), nil
 	}
+
+	// Registrar arquivo como recentemente modificado
+	a.AddRecentFile(filePath)
 
 	// Formatar resposta
 	return fmt.Sprintf("✓ %s", toolResult.Message), nil
@@ -661,4 +673,195 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// detectBugReport detecta se usuário está reportando um problema/bug
+func detectBugReport(message string) bool {
+	msgLower := strings.ToLower(message)
+
+	// Palavras-chave que indicam problema/bug
+	bugKeywords := []string{
+		"não funcionou", "nao funcionou",
+		"não funciona", "nao funciona",
+		"erro", "error",
+		"bug", "problema",
+		"quebrou", "quebrado",
+		"falhou", "falha",
+		"deu errado",
+		"não apareceu", "nao apareceu",
+		"não aparece", "nao aparece",
+		"conserta", "corrija", "corrige",
+		"arruma", "ajusta",
+	}
+
+	for _, keyword := range bugKeywords {
+		if strings.Contains(msgLower, keyword) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// handleBugFix lida com correção de bugs em arquivo existente
+func (a *Agent) handleBugFix(ctx context.Context, userMessage, filePath string) (string, error) {
+	a.colorYellow.Printf("🔧 Detectado problema em arquivo recente: %s\n", filePath)
+	a.colorBlue.Println("📖 Lendo arquivo atual...")
+
+	// Ler arquivo atual
+	toolResult, err := a.toolRegistry.Execute(ctx, "file_reader", map[string]interface{}{
+		"file_path": filePath,
+	})
+
+	if err != nil || !toolResult.Success {
+		return fmt.Sprintf("Erro ao ler arquivo para correção: %s", toolResult.Error), nil
+	}
+
+	currentContent, ok := toolResult.Data["content"].(string)
+	if !ok || currentContent == "" {
+		return "Erro: não foi possível ler o conteúdo do arquivo", nil
+	}
+
+	a.colorBlue.Println("🔍 Analisando problema e gerando correção...")
+
+	// Prompt para LLM corrigir o problema
+	correctionPrompt := fmt.Sprintf(`Você é um assistente de programação especialista em debug.
+
+ARQUIVO ATUAL: %s
+%s
+
+PROBLEMA REPORTADO PELO USUÁRIO:
+"%s"
+
+TAREFA:
+1. Analise o código atual
+2. Identifique o problema descrito pelo usuário
+3. Corrija o código
+4. Retorne o código COMPLETO corrigido
+
+Responda com um JSON:
+{
+  "analysis": "breve análise do problema encontrado",
+  "fixes": "lista de correções aplicadas",
+  "code": "código completo corrigido (TUDO, não apenas a parte modificada)"
+}`, filePath, currentContent, userMessage)
+
+	llmResponse, err := a.llmClient.Complete(ctx, []llm.Message{
+		{Role: "user", Content: correctionPrompt},
+	}, &llm.CompletionOptions{Temperature: 0.3, MaxTokens: 4000})
+
+	if err != nil {
+		return "Erro ao gerar correção", err
+	}
+
+	// Parse JSON response
+	jsonStr := strings.TrimSpace(llmResponse)
+	jsonStr = strings.TrimPrefix(jsonStr, "```json")
+	jsonStr = strings.TrimPrefix(jsonStr, "```")
+	jsonStr = strings.TrimSuffix(jsonStr, "```")
+	jsonStr = strings.TrimSpace(jsonStr)
+
+	var correction map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &correction); err != nil {
+		// Fallback: tentar usar resposta direta
+		a.colorYellow.Println("⚠️  Não foi possível fazer parse, tentando abordagem simples...")
+		return a.handleBugFixSimple(ctx, userMessage, filePath, currentContent)
+	}
+
+	analysis, _ := correction["analysis"].(string)
+	fixes, _ := correction["fixes"].(string)
+	correctedCode, _ := correction["code"].(string)
+
+	if correctedCode == "" {
+		return "Erro: não foi possível gerar código corrigido", nil
+	}
+
+	// Mostrar análise
+	a.colorGreen.Printf("\n🔍 Análise:\n%s\n\n", analysis)
+	a.colorGreen.Printf("✨ Correções aplicadas:\n%s\n\n", fixes)
+
+	// Mostrar diff (primeiras linhas)
+	preview := fmt.Sprintf("Arquivo: %s\nTamanho: %d bytes\n\nPreview das correções:\n%s",
+		filePath, len(correctedCode), truncate(correctedCode, 500))
+
+	// Confirmar correção
+	if a.mode.RequiresConfirmation() {
+		confirmed, err := a.confirmManager.ConfirmWithPreview(
+			"Aplicar correções",
+			preview,
+		)
+
+		if err != nil || !confirmed {
+			return "✗ Correção cancelada pelo usuário", nil
+		}
+	}
+
+	// Aplicar correção
+	toolResult, err = a.toolRegistry.Execute(ctx, "file_writer", map[string]interface{}{
+		"file_path": filePath,
+		"content":   correctedCode,
+		"mode":      "create", // Sobrescrever
+	})
+
+	if err != nil || !toolResult.Success {
+		return fmt.Sprintf("Erro ao aplicar correções: %s", toolResult.Error), nil
+	}
+
+	return fmt.Sprintf("✓ Arquivo corrigido: %s\n\n🔍 Análise: %s\n✨ Correções: %s",
+		filePath, analysis, fixes), nil
+}
+
+// handleBugFixSimple método simplificado para correção (fallback)
+func (a *Agent) handleBugFixSimple(ctx context.Context, userMessage, filePath, currentContent string) (string, error) {
+	a.colorBlue.Println("🔄 Usando método alternativo de correção...")
+
+	prompt := fmt.Sprintf(`Corrija o problema no código abaixo.
+
+ARQUIVO: %s
+CÓDIGO ATUAL:
+%s
+
+PROBLEMA:
+%s
+
+Retorne o código COMPLETO corrigido (não apenas a parte modificada).`, filePath, currentContent, userMessage)
+
+	correctedCode, err := a.llmClient.Complete(ctx, []llm.Message{
+		{Role: "user", Content: prompt},
+	}, &llm.CompletionOptions{Temperature: 0.3, MaxTokens: 4000})
+
+	if err != nil {
+		return "Erro ao gerar correção", err
+	}
+
+	// Limpar markdown
+	correctedCode = strings.TrimPrefix(correctedCode, "```html")
+	correctedCode = strings.TrimPrefix(correctedCode, "```css")
+	correctedCode = strings.TrimPrefix(correctedCode, "```javascript")
+	correctedCode = strings.TrimPrefix(correctedCode, "```")
+	correctedCode = strings.TrimSuffix(correctedCode, "```")
+	correctedCode = strings.TrimSpace(correctedCode)
+
+	// Confirmar
+	if a.mode.RequiresConfirmation() {
+		preview := fmt.Sprintf("Arquivo: %s\nPreview:\n%s", filePath, truncate(correctedCode, 500))
+		confirmed, err := a.confirmManager.ConfirmWithPreview("Aplicar correções", preview)
+
+		if err != nil || !confirmed {
+			return "✗ Correção cancelada", nil
+		}
+	}
+
+	// Aplicar
+	toolResult, err := a.toolRegistry.Execute(ctx, "file_writer", map[string]interface{}{
+		"file_path": filePath,
+		"content":   correctedCode,
+		"mode":      "create",
+	})
+
+	if err != nil || !toolResult.Success {
+		return fmt.Sprintf("Erro ao aplicar correções: %s", toolResult.Error), nil
+	}
+
+	return fmt.Sprintf("✓ Arquivo corrigido: %s", filePath), nil
 }
