@@ -16,6 +16,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
 	"github.com/johnpitter/ollama-code/internal/session"
+	"github.com/johnpitter/ollama-code/internal/skills"
 	"github.com/johnpitter/ollama-code/internal/statusline"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
@@ -27,6 +28,7 @@ type Agent struct {
 	intentDetector  *intent.Detector
 	toolRegistry    *tools.Registry
 	commandRegistry *commands.Registry
+	skillRegistry   *skills.Registry
 	confirmManager  *confirmation.Manager
 	webSearch       *websearch.Orchestrator
 	sessionManager  *session.Manager
@@ -126,11 +128,20 @@ func NewAgent(cfg Config) (*Agent, error) {
 	toolRegistry.Register(tools.NewProjectAnalyzer(cfg.WorkDir))
 	toolRegistry.Register(tools.NewGitOperations(cfg.WorkDir))
 
+	// Criar registry de skills
+	skillRegistry := skills.NewRegistry()
+
+	// Registrar skills especializados
+	skillRegistry.Register(skills.NewResearchSkill())
+	skillRegistry.Register(skills.NewAPISkill())
+	skillRegistry.Register(skills.NewCodeAnalysisSkill())
+
 	agent := &Agent{
 		llmClient:       llmClient,
 		intentDetector:  intentDetector,
 		toolRegistry:    toolRegistry,
 		commandRegistry: commands.NewRegistry(),
+		skillRegistry:   skillRegistry,
 		confirmManager:  confirmation.NewManager(),
 		webSearch:       websearch.NewOrchestrator(),
 		sessionManager:  sessionMgr,
@@ -161,6 +172,11 @@ func (a *Agent) GetCache() *cache.Manager {
 // GetCommandRegistry retorna o registry de comandos
 func (a *Agent) GetCommandRegistry() *commands.Registry {
 	return a.commandRegistry
+}
+
+// GetSkillRegistry retorna o registry de skills
+func (a *Agent) GetSkillRegistry() *skills.Registry {
+	return a.skillRegistry
 }
 
 // ProcessMessage processa mensagem do usuário
