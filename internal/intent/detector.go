@@ -23,14 +23,43 @@ func NewDetector(llmClient *llm.Client) *Detector {
 
 // Detect detecta a intenção de uma mensagem
 func (d *Detector) Detect(ctx context.Context, userMessage, currentDir string, recentFiles []string) (*DetectionResult, error) {
+	return d.DetectWithHistory(ctx, userMessage, currentDir, recentFiles, []llm.Message{})
+}
+
+// DetectWithHistory detecta a intenção usando histórico de mensagens anteriores
+func (d *Detector) DetectWithHistory(ctx context.Context, userMessage, currentDir string, recentFiles []string, history []llm.Message) (*DetectionResult, error) {
 	// Preparar contexto de arquivos
 	filesContext := "nenhum"
 	if len(recentFiles) > 0 {
 		filesContext = strings.Join(recentFiles, ", ")
 	}
 
+	// Preparar contexto de conversa
+	conversationContext := ""
+	if len(history) > 0 {
+		// Pegar últimas 4 mensagens (2 trocas) para contexto
+		startIdx := len(history) - 4
+		if startIdx < 0 {
+			startIdx = 0
+		}
+
+		conversationContext = "\n\nHistórico recente da conversa:"
+		for i := startIdx; i < len(history); i++ {
+			role := "Usuário"
+			if history[i].Role == "assistant" {
+				role = "Assistente"
+			}
+			// Truncar mensagens muito longas
+			content := history[i].Content
+			if len(content) > 200 {
+				content = content[:200] + "..."
+			}
+			conversationContext += fmt.Sprintf("\n%s: %s", role, content)
+		}
+	}
+
 	// Criar prompt do usuário
-	userPrompt := fmt.Sprintf(UserPromptTemplate, currentDir, filesContext, userMessage)
+	userPrompt := fmt.Sprintf(UserPromptTemplate, currentDir, filesContext, conversationContext, userMessage)
 
 	// Chamar LLM
 	messages := []llm.Message{

@@ -202,11 +202,11 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 	})
 	a.mu.Unlock()
 
-	// Detectar intenção
+	// Detectar intenção com histórico da conversa
 	a.colorBlue.Println("\n🔍 Detectando intenção...")
 
 	recentFiles := a.getRecentFiles()
-	detectionResult, err := a.intentDetector.Detect(ctx, userMessage, a.workDir, recentFiles)
+	detectionResult, err := a.intentDetector.DetectWithHistory(ctx, userMessage, a.workDir, recentFiles, a.history)
 	if err != nil {
 		return fmt.Errorf("detect intent: %w", err)
 	}
