@@ -302,12 +302,12 @@ func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionRes
 		return "Nenhum resultado encontrado na web.", nil
 	}
 
-	a.colorBlue.Printf("📄 Buscando conteúdo de %d sites...\n", min(len(results), 3))
+	a.colorBlue.Printf("📄 Encontrados %d resultados, buscando conteúdo...\n", len(results))
 
 	// Fazer fetch do conteúdo real dos top 3 resultados
 	fetchedContents, err := a.webSearch.FetchContents(ctx, results, 3)
 	if err != nil {
-		// Fallback para snippets se fetch falhar
+		a.colorYellow.Printf("⚠️  Erro ao buscar conteúdo: %v, usando snippets\n", err)
 		return a.synthesizeFromSnippets(ctx, userMessage, results)
 	}
 
@@ -317,10 +317,16 @@ func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionRes
 
 	validContents := 0
 	for i, content := range fetchedContents {
-		if content.Error != "" || content.Content == "" {
+		if content.Error != "" {
+			a.colorYellow.Printf("⚠️  Erro ao buscar %s: %s\n", content.URL, content.Error)
+			continue
+		}
+		if content.Content == "" {
+			a.colorYellow.Printf("⚠️  Conteúdo vazio de %s\n", content.URL)
 			continue
 		}
 		validContents++
+		a.colorGreen.Printf("✓ Conteúdo obtido de %s (%d chars)\n", content.URL, len(content.Content))
 		contextBuilder.WriteString(fmt.Sprintf("=== Fonte %d: %s ===\n", i+1, content.Title))
 		contextBuilder.WriteString(fmt.Sprintf("URL: %s\n\n", content.URL))
 		contextBuilder.WriteString(content.Content)
@@ -328,16 +334,25 @@ func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionRes
 	}
 
 	if validContents == 0 {
-		// Fallback para snippets se nenhum conteúdo foi obtido
+		a.colorYellow.Printf("⚠️  Nenhum conteúdo válido, usando snippets\n")
 		return a.synthesizeFromSnippets(ctx, userMessage, results)
 	}
 
+	a.colorGreen.Printf("✓ %d fontes com conteúdo válido\n", validContents)
+
 	// Usar LLM para sintetizar resposta com conteúdo completo
-	prompt := fmt.Sprintf(`Com base no conteúdo real dos sites abaixo, responda à pergunta: "%s"
+	prompt := fmt.Sprintf(`Você acabou de buscar informações atualizadas na internet. Use SOMENTE as informações dos sites abaixo para responder.
+
+Pergunta: "%s"
 
 %s
 
-Forneça uma resposta clara, precisa e bem fundamentada. Cite as fontes quando relevante.`, userMessage, contextBuilder.String())
+IMPORTANTE:
+- Use APENAS as informações fornecidas acima
+- NÃO diga que não tem acesso à internet ou dados em tempo real
+- Você ACABOU de buscar essas informações na web
+- Forneça uma resposta direta e objetiva baseada no conteúdo obtido
+- Cite as fontes quando relevante`, userMessage, contextBuilder.String())
 
 	a.colorGreen.Println("\n🤖 Assistente:")
 
@@ -361,26 +376,49 @@ Forneça uma resposta clara, precisa e bem fundamentada. Cite as fontes quando r
 
 // synthesizeFromSnippets sintetiza resposta apenas com snippets (fallback)
 func (a *Agent) synthesizeFromSnippets(ctx context.Context, userMessage string, results []websearch.SearchResult) (string, error) {
+	a.colorYellow.Println("ℹ️  Usando snippets de pesquisa...")
+
 	resultsText := "Resultados da pesquisa:\n\n"
+	validSnippets := 0
 	for i, r := range results {
-		if i >= 3 {
+		if i >= 5 {
 			break
 		}
-		resultsText += fmt.Sprintf("%d. %s\n   %s\n   URL: %s\n\n", i+1, r.Title, r.Snippet, r.URL)
+		if r.Snippet != "" {
+			validSnippets++
+			resultsText += fmt.Sprintf("%d. %s\n   %s\n   URL: %s\n\n", validSnippets, r.Title, r.Snippet, r.URL)
+		}
 	}
 
-	prompt := fmt.Sprintf(`Com base nos snippets de pesquisa abaixo, responda: "%s"
+	if validSnippets == 0 {
+		return "Não foi possível obter informações da web no momento. Por favor, tente novamente.", nil
+	}
+
+	prompt := fmt.Sprintf(`Você acabou de buscar informações na internet. Use os snippets abaixo para responder.
+
+Pergunta: "%s"
 
 %s
 
-Resposta:`, userMessage, resultsText)
+IMPORTANTE:
+- Use APENAS as informações dos snippets acima
+- NÃO diga que não tem acesso à internet
+- Você ACABOU de fazer uma busca web
+- Forneça uma resposta direta baseada nos snippets
+- Se os snippets não tiverem informação suficiente, diga isso claramente`, userMessage, resultsText)
 
-	response, err := a.llmClient.Complete(ctx, []llm.Message{
+	a.colorGreen.Println("\n🤖 Assistente:")
+
+	response, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
 		{Role: "user", Content: prompt},
 	}, &llm.CompletionOptions{
 		Temperature: 0.7,
 		MaxTokens:   1000,
+	}, func(chunk string) {
+		fmt.Print(chunk)
 	})
+
+	fmt.Println()
 
 	if err != nil {
 		return resultsText, nil

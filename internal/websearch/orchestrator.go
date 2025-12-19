@@ -29,7 +29,7 @@ type SearchResult struct {
 func NewOrchestrator() *Orchestrator {
 	return &Orchestrator{
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 10 * time.Second, // Reduzir timeout para evitar travamentos
 		},
 		fetcher: NewContentFetcher(),
 		cache:   make(map[string][]SearchResult),
@@ -56,9 +56,9 @@ func (o *Orchestrator) Search(ctx context.Context, query string, sources []strin
 
 		switch source {
 		case "duckduckgo":
-			results, err = o.searchDuckDuckGo(query)
+			results, err = o.searchDuckDuckGo(ctx, query)
 		case "stackoverflow":
-			results, err = o.searchStackOverflow(query)
+			results, err = o.searchStackOverflow(ctx, query)
 		default:
 			continue
 		}
@@ -79,20 +79,22 @@ func (o *Orchestrator) Search(ctx context.Context, query string, sources []strin
 }
 
 // searchDuckDuckGo busca no DuckDuckGo (HTML scraping simples)
-func (o *Orchestrator) searchDuckDuckGo(query string) ([]SearchResult, error) {
+func (o *Orchestrator) searchDuckDuckGo(ctx context.Context, query string) ([]SearchResult, error) {
 	// DuckDuckGo HTML search
 	searchURL := fmt.Sprintf("https://html.duckduckgo.com/html/?q=%s", url.QueryEscape(query))
 
-	req, err := http.NewRequest("GET", searchURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", searchURL, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "pt-BR,pt;q=0.9,en;q=0.8")
 
 	resp, err := o.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -100,13 +102,19 @@ func (o *Orchestrator) searchDuckDuckGo(query string) ([]SearchResult, error) {
 		return nil, fmt.Errorf("status code: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 5*1024*1024)) // Limitar a 5MB
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read body: %w", err)
 	}
 
+	htmlContent := string(body)
+
 	// Parse simples (poderia usar goquery para HTML parsing melhor)
-	results := o.parseDuckDuckGoHTML(string(body))
+	results := o.parseDuckDuckGoHTML(htmlContent)
+
+	if len(results) == 0 {
+		return nil, fmt.Errorf("nenhum resultado encontrado no HTML")
+	}
 
 	return results, nil
 }
@@ -119,37 +127,58 @@ func (o *Orchestrator) parseDuckDuckGoHTML(html string) []SearchResult {
 	// Tentar extrair snippets básicos
 
 	// Procurar por tags <a class="result__a"
-	titleStart := 0
+	searchPos := 0
 	for {
-		titleStart = strings.Index(html[titleStart:], `class="result__a"`)
-		if titleStart == -1 {
+		foundIndex := strings.Index(html[searchPos:], `class="result__a"`)
+		if foundIndex == -1 {
 			break
 		}
-		titleStart += len(`class="result__a"`)
+		// Converter para índice absoluto
+		titleStart := searchPos + foundIndex
 
 		// Tentar extrair href
 		hrefStart := strings.LastIndex(html[:titleStart], `href="`)
 		if hrefStart == -1 {
+			searchPos = titleStart + 1
 			continue
 		}
 		hrefStart += len(`href="`)
 		hrefEnd := strings.Index(html[hrefStart:], `"`)
 		if hrefEnd == -1 {
+			searchPos = titleStart + 1
 			continue
 		}
 		resultURL := html[hrefStart : hrefStart+hrefEnd]
 
+		// DuckDuckGo usa URLs codificadas como //duckduckgo.com/l/?uddg=URL
+		// Extrair a URL real
+		resultURL = o.extractRealURL(resultURL)
+
+		// Ignorar URLs inválidas ou vazias
+		if resultURL == "" || !strings.HasPrefix(resultURL, "http") {
+			searchPos = titleStart + 1
+			continue
+		}
+
 		// Tentar extrair título
 		titleTextStart := strings.Index(html[titleStart:], `>`)
 		if titleTextStart == -1 {
+			searchPos = titleStart + 1
 			continue
 		}
 		titleTextStart += titleStart + 1
 		titleTextEnd := strings.Index(html[titleTextStart:], `</a>`)
 		if titleTextEnd == -1 {
+			searchPos = titleStart + 1
 			continue
 		}
 		title := strings.TrimSpace(html[titleTextStart : titleTextStart+titleTextEnd])
+
+		// Ignorar resultados sem título
+		if title == "" {
+			searchPos = titleStart + 1
+			continue
+		}
 
 		// Tentar extrair snippet
 		snippetStart := strings.Index(html[titleStart:], `class="result__snippet"`)
@@ -174,6 +203,9 @@ func (o *Orchestrator) parseDuckDuckGoHTML(html string) []SearchResult {
 		}
 		results = append(results, result)
 
+		// Avançar searchPos para buscar próximo resultado
+		searchPos = titleStart + 1
+
 		if len(results) >= 5 {
 			break
 		}
@@ -183,14 +215,19 @@ func (o *Orchestrator) parseDuckDuckGoHTML(html string) []SearchResult {
 }
 
 // searchStackOverflow busca no Stack Overflow via API
-func (o *Orchestrator) searchStackOverflow(query string) ([]SearchResult, error) {
+func (o *Orchestrator) searchStackOverflow(ctx context.Context, query string) ([]SearchResult, error) {
 	// Stack Overflow API
 	apiURL := fmt.Sprintf(
 		"https://api.stackexchange.com/2.3/search?order=desc&sort=relevance&intitle=%s&site=stackoverflow",
 		url.QueryEscape(query),
 	)
 
-	resp, err := o.client.Get(apiURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := o.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -241,4 +278,34 @@ func (o *Orchestrator) FetchContents(ctx context.Context, results []SearchResult
 	}
 
 	return contents, nil
+}
+
+// extractRealURL extrai a URL real de URLs codificadas do DuckDuckGo
+func (o *Orchestrator) extractRealURL(rawURL string) string {
+	// DuckDuckGo pode retornar URLs em formato:
+	// //duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com
+	// Ou diretamente: https://example.com
+
+	// Se começar com //, adicionar https:
+	if strings.HasPrefix(rawURL, "//") {
+		rawURL = "https:" + rawURL
+	}
+
+	// Se contém uddg= ou kh=, tentar extrair URL decodificada
+	if strings.Contains(rawURL, "uddg=") {
+		parts := strings.Split(rawURL, "uddg=")
+		if len(parts) > 1 {
+			decoded, err := url.QueryUnescape(parts[1])
+			if err == nil {
+				// Remover parâmetros adicionais após &
+				if idx := strings.Index(decoded, "&"); idx != -1 {
+					decoded = decoded[:idx]
+				}
+				return decoded
+			}
+		}
+	}
+
+	// Fallback: retornar URL original
+	return rawURL
 }
