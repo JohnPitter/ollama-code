@@ -114,23 +114,66 @@ func (o *Orchestrator) parseDuckDuckGoHTML(html string) []SearchResult {
 	results := []SearchResult{}
 
 	// Parse muito simples - na produção usar goquery ou similar
-	// Procurar por padrões de resultados no HTML
+	// Tentar extrair snippets básicos
 
-	lines := strings.Split(html, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "result__a") || strings.Contains(line, "result__title") {
-			// Extrair título e URL (muito simplificado)
-			result := SearchResult{
-				Title:  "Resultado DuckDuckGo",
-				URL:    "",
-				Snippet: "",
-				Source: "duckduckgo",
-			}
-			results = append(results, result)
+	// Procurar por tags <a class="result__a"
+	titleStart := 0
+	for {
+		titleStart = strings.Index(html[titleStart:], `class="result__a"`)
+		if titleStart == -1 {
+			break
+		}
+		titleStart += len(`class="result__a"`)
 
-			if len(results) >= 5 {
-				break
+		// Tentar extrair href
+		hrefStart := strings.LastIndex(html[:titleStart], `href="`)
+		if hrefStart == -1 {
+			continue
+		}
+		hrefStart += len(`href="`)
+		hrefEnd := strings.Index(html[hrefStart:], `"`)
+		if hrefEnd == -1 {
+			continue
+		}
+		resultURL := html[hrefStart : hrefStart+hrefEnd]
+
+		// Tentar extrair título
+		titleTextStart := strings.Index(html[titleStart:], `>`)
+		if titleTextStart == -1 {
+			continue
+		}
+		titleTextStart += titleStart + 1
+		titleTextEnd := strings.Index(html[titleTextStart:], `</a>`)
+		if titleTextEnd == -1 {
+			continue
+		}
+		title := strings.TrimSpace(html[titleTextStart : titleTextStart+titleTextEnd])
+
+		// Tentar extrair snippet
+		snippetStart := strings.Index(html[titleStart:], `class="result__snippet"`)
+		snippet := ""
+		if snippetStart != -1 {
+			snippetStart += titleStart + len(`class="result__snippet"`)
+			snippetTextStart := strings.Index(html[snippetStart:], `>`)
+			if snippetTextStart != -1 {
+				snippetTextStart += snippetStart + 1
+				snippetTextEnd := strings.Index(html[snippetTextStart:], `</`)
+				if snippetTextEnd != -1 {
+					snippet = strings.TrimSpace(html[snippetTextStart : snippetTextStart+snippetTextEnd])
+				}
 			}
+		}
+
+		result := SearchResult{
+			Title:   title,
+			URL:     resultURL,
+			Snippet: snippet,
+			Source:  "duckduckgo",
+		}
+		results = append(results, result)
+
+		if len(results) >= 5 {
+			break
 		}
 	}
 

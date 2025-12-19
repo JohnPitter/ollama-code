@@ -19,7 +19,8 @@
       "Bash(go build:*)",
       "Bash(ollama list:*)",
       "Bash(cat:*)",
-      "Bash(timeout 60 ./build/ollama-code:*)"
+      "Bash(timeout 60 ./build/ollama-code:*)",
+      "Bash(timeout 90 ./build/ollama-code:*)"
     ],
     "deny": [],
     "ask": []

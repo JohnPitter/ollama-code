@@ -340,12 +340,18 @@ func (a *Agent) handleQuestion(ctx context.Context, userMessage string) (string,
 		Content: userMessage,
 	})
 
+	// Mostrar header antes de começar streaming
+	a.colorGreen.Println("\n🤖 Assistente:")
+
 	response, err := a.llmClient.CompleteStreaming(ctx, messages, &llm.CompletionOptions{
 		Temperature: 0.7,
 		MaxTokens:   2000,
 	}, func(chunk string) {
 		fmt.Print(chunk)
 	})
+
+	// Adicionar newline após streaming
+	fmt.Println()
 
 	if err != nil {
 		return "", fmt.Errorf("llm completion: %w", err)

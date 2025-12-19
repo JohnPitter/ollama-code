@@ -175,10 +175,12 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 	})
 	a.mu.Unlock()
 
-	// Mostrar resposta
-	a.colorGreen.Println("\n🤖 Assistente:")
-	fmt.Println(response)
-	fmt.Println()
+	// Mostrar resposta (se não foi mostrada em streaming)
+	if detectionResult.Intent != intent.IntentQuestion {
+		a.colorGreen.Println("\n🤖 Assistente:")
+		fmt.Println(response)
+		fmt.Println()
+	}
 
 	return nil
 }
