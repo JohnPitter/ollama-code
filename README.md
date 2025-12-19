@@ -1,528 +1,359 @@
-# 🤖 Ollama Code - AI Code Assistant
+# 🤖 Ollama Code - Assistente de Código AI 100% Local
 
-> Assistente de código AI inteligente que funciona como Claude Code, 100% local, escrito em Go.
+> Seu assistente de programação inteligente que roda completamente no seu computador, sem precisar de internet ou pagar assinaturas!
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://go.dev/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)]()
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-90_passing-success)](.)
 
----
+## 📖 Índice
 
-## ✨ Características
+- [O que é?](#-o-que-é)
+- [Por que usar?](#-por-que-usar)
+- [Instalação Fácil](#-instalação-fácil)
+- [Como usar](#-como-usar)
+- [Funcionalidades](#-funcionalidades)
+- [Configuração](#%EF%B8%8F-configuração)
+- [Exemplos Práticos](#-exemplos-práticos)
+- [Documentação Completa](#-documentação-completa)
+- [Contribuindo](#-contribuindo)
 
-### Base Features
-- 🧠 **Linguagem Natural** - Sem comandos especiais (`/read`, `/exec`), apenas fale naturalmente
-- 🎯 **Detecção Inteligente** - IA detecta automaticamente suas intenções usando LLM
-- 🔧 **8+ Ferramentas** - Leitura/escrita de arquivos, execução de comandos, git, análise de código
-- 📷 **Suporte a Imagens** - Lê e analisa imagens (PNG, JPG, GIF, etc)
-- 🌐 **Pesquisa Web** - Busca na internet quando necessário (DuckDuckGo, Stack Overflow, GitHub)
-- 🎛️ **3 Modos de Operação**:
-  - **READ-ONLY**: Somente leitura
-  - **INTERACTIVE**: Com confirmação (padrão)
-  - **AUTONOMOUS**: Totalmente automático
-- ⚡ **Performance Máxima** - Startup <15ms, streaming em tempo real
-- 🔒 **Privacidade** - 100% local, sem envio de dados para nuvem
+## 🎯 O que é?
 
-### Enterprise Features ✨ NEW!
-- 💾 **Checkpoints & Recovery** - Volte no tempo, desfaça mudanças, recupere estados anteriores
-- 📂 **Session Management** - Salve e retome sessões de trabalho
-- 🧠 **Hierarchical Memory** - 5 níveis de memória (Enterprise → Project → Rules → User → Local)
-- ⚡ **Slash Commands** - 10+ comandos built-in (/help, /checkpoint, /session, /doctor, etc)
-- 🪝 **Hooks System** - Pre/post hooks para validação e automação
-- 🎨 **Output Styles** - 4 estilos de output (default, explanatory, learning, corporate)
-- 🚀 **Performance** - Context cache, async tasks, otimizações
-- 🏥 **Diagnostics** - /doctor para health checks completos
-- 🖥️ **Hardware Auto-Detection** - Detecta seu hardware e otimiza automaticamente
-- ⚙️ **3 Presets de Configuração** - Compatibility, Performance e Ultra
+Ollama Code é um **assistente de programação com inteligência artificial** que:
+- ✅ Roda 100% no seu computador (privacidade total!)
+- ✅ Não precisa de internet depois de instalar
+- ✅ É grátis e open source
+- ✅ Funciona com Ollama (modelos de IA locais)
+- ✅ Entende e escreve código em várias linguagens
+- ✅ Pesquisa na internet por você
+- ✅ Analisa seu código e sugere melhorias
 
----
+## 💡 Por que usar?
 
-## 🎯 Objetivo
+### Vs. ChatGPT/Claude/Copilot
 
-Criar um assistente de código que funciona como Claude Code, mas rodando completamente local usando Ollama.
+| Recurso | Ollama Code | ChatGPT/Claude | GitHub Copilot |
+|---------|-------------|----------------|----------------|
+| **Privacidade** | ✅ 100% Local | ❌ Envia dados | ❌ Envia dados |
+| **Custo** | ✅ Grátis | 💰 $20/mês | 💰 $10/mês |
+| **Offline** | ✅ Funciona | ❌ Precisa internet | ❌ Precisa internet |
+| **Sem limite** | ✅ Ilimitado | ❌ Limitado | ❌ Limitado |
+| **Código proprietário** | ✅ Fica no seu PC | ❌ Vai para servidores | ❌ Vai para servidores |
 
-**Exemplo de uso:**
+## 🚀 Instalação Fácil
+
+### Passo 1: Instalar Ollama
+
+**Windows:**
+1. Baixe: https://ollama.com/download/windows
+2. Execute o instalador
+3. Abra o terminal e teste: `ollama --version`
+
+**Linux/Mac:**
 ```bash
-$ ollama-code chat
-
-Você: Cria um servidor HTTP em Go com endpoint /health
-
-🤖: Vou criar um servidor HTTP básico...
-
-🔔 Confirmação necessária:
-   Ação: Criar arquivo server.go
-   Tipo: WRITE_FILE
-
-Executar? [y/N]: y
-
-✅ Arquivo criado: server.go
-
-🤖: Servidor criado! Quer que eu execute para testar?
+curl -fsSL https://ollama.com/install.sh | sh
 ```
 
----
+### Passo 2: Baixar um modelo de IA
 
-## 📋 Requisitos
-
-### Hardware Alvo
-- **CPU**: Intel i9 14ª gen (24 cores) ou similar
-- **RAM**: 64GB
-- **GPU**: NVIDIA RTX Ada 2000 (16GB VRAM) ou similar
-- **Storage**: 1TB NVMe SSD
-
-### Software
-- **Go**: 1.21+
-- **Ollama**: Última versão
-- **CUDA**: 11.8+ (para GPU NVIDIA)
-- **OS**: Linux, Windows ou macOS
-
----
-
-## 🚀 Como Rodar o Projeto
-
-### Pré-requisitos
-
-1. **Go 1.21+** instalado
-2. **Ollama** instalado e rodando
-3. **Modelo Ollama** baixado
-
-### Instalação Rápida (3 passos)
-
-#### 1️⃣ Instalar Ollama
+Escolha um modelo (recomendamos começar com o menor):
 
 ```bash
-# Linux
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Windows
-# Baixe e instale de: https://ollama.ai/download/windows
-
-# macOS
-brew install ollama
-```
-
-Inicie o serviço Ollama:
-```bash
-ollama serve
-```
-
-#### 2️⃣ Baixar um modelo
-
-```bash
-# Modelo recomendado para começar (4.7GB)
+# Modelo pequeno (4GB RAM) - Rápido mas menos preciso
 ollama pull qwen2.5-coder:7b
 
-# Ou modelos mais poderosos (se tiver GPU com 16GB+ VRAM)
-ollama pull qwen2.5-coder:14b-instruct-q5_K_M  # 9.9GB
-ollama pull qwen2.5-coder:32b-instruct-q6_K    # 21GB
+# Modelo médio (8GB RAM) - Balanceado ⭐ RECOMENDADO
+ollama pull qwen2.5-coder:14b
+
+# Modelo grande (16GB+ RAM) - Mais preciso mas mais lento
+ollama pull qwen2.5-coder:32b
 ```
 
-#### 3️⃣ Compilar e Executar
+### Passo 3: Instalar Ollama Code
+
+**Opção A: Baixar executável (Mais fácil)**
+
+1. Vá em [Releases](https://github.com/johnpitter/ollama-code/releases)
+2. Baixe para seu sistema operacional
+3. Coloque em uma pasta no PATH
+
+**Opção B: Compilar do código-fonte**
 
 ```bash
-# Clone o repositório
-git clone https://github.com/JohnPitter/ollama-code.git
+# 1. Instalar Go (se não tiver)
+# Windows: https://go.dev/dl/
+# Linux: sudo apt install golang-go
+
+# 2. Clonar repositório
+git clone https://github.com/johnpitter/ollama-code.git
 cd ollama-code
 
-# Compile a aplicação
-./build.sh          # Linux/macOS
-# ou
-.\build.bat         # Windows
+# 3. Compilar
+chmod +x build.sh
+./build.sh
 
-# Execute!
-./build/ollama-code chat
+# 4. Testar
+./build/ollama-code --version
 ```
 
-**Pronto!** A aplicação irá:
-- ✅ Detectar automaticamente seu hardware
-- ✅ Criar configuração otimizada em `~/.ollama-code/config.json`
-- ✅ Iniciar o modo chat interativo
-
-### Comandos Disponíveis
+### Passo 4: Primeiro teste!
 
 ```bash
-# Modo chat interativo (recomendado)
-./build/ollama-code chat
-
-# Fazer uma pergunta direta
-./build/ollama-code ask "como criar um loop em Go?"
-
-# Modo somente leitura (sem modificações)
-./build/ollama-code chat --mode readonly
-
-# Modo autônomo (sem confirmações)
-./build/ollama-code chat --mode autonomous
-
-# Ver ajuda completa
-./build/ollama-code help
+./build/ollama-code ask "Como criar uma função que soma dois números em Python?"
 ```
 
-### Instalação Global (Opcional)
+Se funcionou, você está pronto! 🎉
 
-Para usar `ollama-code` de qualquer diretório:
+## 📚 Como usar
+
+Ollama Code tem 3 modos de uso:
+
+### 1. Perguntas rápidas (ask)
+
+Para perguntas pontuais:
 
 ```bash
-# Linux/macOS
-sudo cp build/ollama-code /usr/local/bin/
-ollama-code chat
-
-# Windows (PowerShell como Admin)
-Copy-Item build/ollama-code.exe C:\Windows\System32\
-ollama-code chat
+ollama-code ask "Como ler um arquivo JSON em Go?"
+ollama-code ask "Qual a diferença entre let e var em JavaScript?"
+ollama-code ask "Pesquise na internet sobre Go 1.23"
 ```
 
----
+### 2. Chat interativo (chat)
 
-## ⚙️ Configuração Avançada (Opcional)
-
-### Otimizar para GPU NVIDIA
-
-**Linux/macOS** (`~/.config/ollama/env.conf`):
-```bash
-export OLLAMA_GPU_LAYERS=999
-export OLLAMA_NUM_GPU=1
-export OLLAMA_MAX_LOADED_MODELS=2
-export OLLAMA_NUM_PARALLEL=4
-export OLLAMA_FLASH_ATTENTION=1
-export OLLAMA_MAX_VRAM=16384
-```
-
-**Windows** (PowerShell como Admin):
-```powershell
-[System.Environment]::SetEnvironmentVariable('OLLAMA_GPU_LAYERS', '999', 'Machine')
-[System.Environment]::SetEnvironmentVariable('OLLAMA_NUM_GPU', '1', 'Machine')
-Restart-Service Ollama
-```
-
-### Ambiente Corporativo com Proxy
-
-Use os scripts de download direto:
-```bash
-# Linux/macOS
-chmod +x download-models-direct.sh
-./download-models-direct.sh
-
-# Windows
-.\download-models-direct.ps1
-```
-
-### Editar Configuração
-
-A aplicação cria automaticamente `~/.ollama-code/config.json` na primeira execução.
-Para customizar, edite o arquivo ou veja [CONFIG.md](CONFIG.md)
-
----
-
-## 📖 Uso
-
-### Primeira Execução - Detecção Automática de Hardware
-
-Na primeira vez que você executar o Ollama Code:
-
-```bash
-$ ./build/ollama-code chat
-
-🔍 First run detected - Analyzing your hardware...
-
-╔════════════════════════════════════════════════════════════╗
-║          OLLAMA CODE - HARDWARE DETECTION REPORT           ║
-╚════════════════════════════════════════════════════════════╝
-
-🖥️  HARDWARE DETECTED:
-   CPU: AMD Ryzen 5 5600 6-Core Processor
-   Cores/Threads: 12 / 12
-   RAM: 32694 MB total (14494 MB available)
-   GPU: NVIDIA GeForce RTX 4070
-   VRAM: 12282 MB (1 GPU(s))
-   OS: windows / amd64
-
-⚡ PERFORMANCE TIER: mid-range
-
-🎯 PRESET SELECTED: performance
-   Performance - Balanceamento entre velocidade e compatibilidade
-
-⚙️  OPTIMIZED CONFIGURATION:
-   Model: qwen2.5-coder:14b-instruct-q5_K_M
-   Temperature: 0.7
-   GPU Layers: 35
-   Max VRAM: 9825 MB
-   Sessions: enabled
-   Cache: enabled (15 min)
-
-✅ Configuration optimized for your hardware!
-   Config saved to: ~/.ollama-code/config.json
-```
-
-A aplicação automaticamente:
-- ✅ Detecta CPU, RAM, GPU e VRAM disponíveis
-- ✅ Classifica seu hardware (high-end, mid-range, entry, low-end)
-- ✅ Seleciona o melhor preset (ultra, performance, compatibility)
-- ✅ Gera configuração otimizada
-- ✅ Salva em `~/.ollama-code/config.json`
-
-### Modo Interativo (Padrão)
+Para conversar e fazer várias perguntas:
 
 ```bash
 ollama-code chat
-
-Você: Analisa esse projeto
-🤖: [Lê arquivos e explica a estrutura]
-
-Você: Cria um servidor REST em Go
-🤖: [Gera código e pede confirmação antes de criar arquivo]
 ```
 
-### Modo Read-Only (Somente Leitura)
+Dentro do chat:
+```
+💬 Você: Como criar uma API REST em Go?
+🤖 Assistente: [explica...]
 
-```bash
-ollama-code chat --mode readonly
+💬 Você: Pode me dar um exemplo de código?
+🤖 Assistente: [mostra código...]
 
-Você: Mostra o main.go
-🤖: [Mostra conteúdo]
-
-Você: Corrija os erros
-❌ Ação bloqueada: Escrita não permitida em modo READ-ONLY
+💬 Você: exit  ← para sair
 ```
 
-### Modo Autônomo (Sem Confirmação)
+### 3. Modo autônomo (autonomous)
+
+O assistente pode fazer mudanças nos arquivos automaticamente:
 
 ```bash
 ollama-code chat --mode autonomous
-
-Você: Cria um projeto completo com CRUD e testes
-
-[10:23:45] ✓ Criado: main.go
-[10:23:46] ✓ Criado: handlers/user.go
-[10:23:47] ✓ Criado: tests/user_test.go
-[10:23:48] ⚙️  go mod tidy
-[10:23:49] ⚙️  go test ./...
-[10:23:52] ✅ Testes passando
 ```
 
-### Leitura de Imagens
+⚠️ **Atenção:** Neste modo, o assistente pode modificar seus arquivos sem perguntar!
+
+## ✨ Funcionalidades
+
+### 🌐 Pesquisa na Internet
+
+Ollama Code pode pesquisar na web e trazer informações atualizadas:
 
 ```bash
-Você: Leia a imagem screenshot.png e me diga o que tem nela
-
-🤖: [Lê e analisa a imagem]
-    A imagem mostra uma interface de usuário com...
+ollama-code ask "Qual a temperatura em São Paulo hoje?"
+ollama-code ask "O que há de novo no Python 3.12?"
 ```
 
-### Pesquisa na Internet
+**Como funciona:**
+1. Busca no DuckDuckGo
+2. Acessa os sites e extrai o conteúdo
+3. Resume as informações para você
+
+### 🔧 Skills Especializados
+
+Ollama Code tem habilidades especiais:
+
+**1. Research (Pesquisa)**
+- Busca na web
+- Compara tecnologias
+- Encontra documentação
+
+**2. API**
+- Testa endpoints
+- Analisa APIs REST
+- Faz requisições HTTP
+
+**3. Code Analysis (Análise de Código)**
+- Detecta bugs
+- Mede complexidade
+- Sugere otimizações
+- Verifica segurança
+
+### 📝 Sistema OLLAMA.md
+
+Configure o assistente com arquivos OLLAMA.md em 4 níveis:
+
+**1. Enterprise** (~/.ollama/OLLAMA.md)
+```markdown
+# Padrões da Empresa
+
+- Sempre usar MIT license
+- Code review obrigatório
+```
+
+**2. Project** (seu-projeto/OLLAMA.md)
+```markdown
+# Projeto E-commerce
+
+- Usar Clean Architecture
+- 80% de cobertura de testes
+```
+
+**3. Language** (seu-projeto/.ollama/go/OLLAMA.md)
+```markdown
+# Convenções Go
+
+- Usar golangci-lint
+- Testes table-driven
+```
+
+**4. Local** (seu-projeto/api/OLLAMA.md)
+```markdown
+# API Handlers
+
+- Validar todo input
+- Logar todas requisições
+```
+
+O assistente segue todas essas regras automaticamente!
+
+## ⚙️ Configuração
+
+### Mudar o modelo de IA
 
 ```bash
-Você: Como corrigir erro "permission denied" no Docker?
+# Usar modelo maior (mais preciso)
+ollama-code chat --model qwen2.5-coder:32b
 
-🌐 Pesquisando na internet...
-✓ Encontrei 3 fontes relevantes
-
-🤖: O erro ocorre quando... [solução com exemplos]
-
-📚 Fontes:
-[1] Stack Overflow - https://...
-[2] Docker Docs - https://...
+# Usar modelo menor (mais rápido)
+ollama-code chat --model qwen2.5-coder:7b
 ```
 
----
-
-## 🎛️ Modos de Operação
-
-| Modo | Flag | Descrição | Uso Recomendado |
-|------|------|-----------|-----------------|
-| **INTERACTIVE** | `--mode interactive` (padrão) | Confirma ações destrutivas | Desenvolvimento do dia a dia |
-| **READ-ONLY** | `--mode readonly` | Apenas leitura | Code review, exploração |
-| **AUTONOMOUS** | `--mode autonomous` | Tudo automático | Automação, prototipagem |
-
----
-
-## 🔧 Ferramentas Disponíveis
-
-O sistema detecta automaticamente qual ferramenta usar:
-
-- **FileReader**: Lê arquivos de texto e imagens
-- **FileWriter**: Escreve/modifica arquivos
-- **CommandExecutor**: Executa comandos shell
-- **CodeSearcher**: Busca em código (ripgrep)
-- **ProjectAnalyzer**: Analisa estrutura do projeto
-- **GitOperations**: Operações git (commit, push, etc)
-- **WebSearcher**: Pesquisa na internet
-
-**Você não precisa especificar qual ferramenta usar** - a IA escolhe automaticamente baseado no seu pedido!
-
----
-
-## 📊 Performance
-
-**No hardware alvo (i9 14ª gen + RTX Ada 2000):**
-
-```
-Startup time:      < 15ms
-Memory (base):     ~10MB
-Binary size:       ~8MB (otimizado)
-LLM throughput:    ~30-40 tokens/s
-File operations:   < 10ms
-Web search:        ~2-5s (cache: <100ms)
-```
-
----
-
-## 🛠️ Desenvolvimento
-
-### Build
+### Modos de operação
 
 ```bash
-# Build padrão
-make build
+# Modo somente leitura (não altera nada)
+ollama-code chat --mode readonly
 
-# Build otimizado (produção)
-make build-optimized
+# Modo interativo (pergunta antes de modificar) ⭐ PADRÃO
+ollama-code chat --mode interactive
 
-# Executar sem instalar
-make run
-
-# Testes
-make test
-
-# Limpar
-make clean
+# Modo autônomo (modifica sem perguntar)
+ollama-code chat --mode autonomous
 ```
 
-### Estrutura do Projeto
+### Arquivo de configuração
 
-```
-ollama-code/
-├── cmd/ollama-code/main.go          # Entry point
-├── internal/
-│   ├── agent/                       # Agente principal
-│   ├── intent/                      # Detecção de intenções
-│   ├── tools/                       # Ferramentas
-│   ├── websearch/                   # Pesquisa web
-│   ├── llm/                         # Client Ollama
-│   └── confirmation/                # Confirmações
-├── Makefile
-└── IMPLEMENTATION_PLAN.md           # Plano completo
+Crie `~/.ollama-code/config.json`:
+
+```json
+{
+  "ollama_url": "http://localhost:11434",
+  "model": "qwen2.5-coder:7b",
+  "mode": "interactive",
+  "max_tokens": 4096
+}
 ```
 
----
+## 💡 Exemplos Práticos
 
-## 📚 Documentação
+### Exemplo 1: Criar uma função
 
-- **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)** - Plano técnico completo de implementação (base)
-- **[ENTERPRISE_FEATURES.md](ENTERPRISE_FEATURES.md)** - Funcionalidades enterprise-grade completas
-- **[download-models-direct.sh](download-models-direct.sh)** - Script para download de modelos (Linux/macOS)
-- **[download-models-direct.ps1](download-models-direct.ps1)** - Script para download de modelos (Windows)
+```bash
+$ ollama-code ask "Crie uma função em Python que calcula fatorial"
 
----
+🤖 Assistente:
+Aqui está uma função para calcular fatorial:
+
+```python
+def fatorial(n):
+    if n == 0 or n == 1:
+        return 1
+    return n * fatorial(n - 1)
+
+# Uso
+print(fatorial(5))  # 120
+```
+```
+
+### Exemplo 2: Pesquisar na internet
+
+```bash
+$ ollama-code ask "Pesquise sobre as novidades do Go 1.23"
+
+🌐 Pesquisando na web: novidades do Go 1.23
+📄 Buscando conteúdo de 3 sites...
+✓ Conteúdo obtido de https://go.dev/doc/go1.23
+
+🤖 Assistente:
+O Go 1.23 trouxe várias novidades:
+
+1. Range over Functions: Agora você pode usar range com funções
+2. Generic Type Aliases: Suporte experimental para aliases genéricos
+3. Novo pacote iter: Para trabalhar com iteradores
+4. Melhorias no compilador: Binários 15% menores
+5. Garbage Collector: Pausas 30% mais rápidas
+
+Fonte: go.dev
+```
+
+### Exemplo 3: Analisar código
+
+```bash
+$ ollama-code ask "Analise este código Go e sugira melhorias..."
+
+🤖 Assistente:
+Encontrei alguns pontos de melhoria:
+
+1. Use range em vez de índice
+2. Evite comparação com string vazia
+3. Adicione documentação
+[mostra código melhorado...]
+```
+
+## 📚 Documentação Completa
+
+### Mudanças Recentes
+
+- [Web Search Híbrido](changes/01-web-search-hybrid.md) - Busca real na internet
+- [Agent Skills](changes/02-agent-skills.md) - Sistema de habilidades
+- [OLLAMA.md](changes/03-ollama-md-system.md) - Configuração hierárquica
+
+## 🛠️ Tecnologias
+
+- **Go 1.21+** - Linguagem principal
+- **Ollama** - Modelos de IA locais
+- **DuckDuckGo** - Busca na web
+- **Cobra** - CLI framework
 
 ## 🤝 Contribuindo
 
-Este projeto foi criado como um plano de implementação completo para ser executado por uma IA (como Grok Code Fast 1).
+Adoramos contribuições!
 
-Para contribuir:
-1. Leia o [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
-2. Siga a estrutura definida
-3. Implemente fase por fase
-4. Teste cada componente
-5. Submeta PR
-
----
-
-## 📝 Exemplos Avançados
-
-### Criar projeto completo
-```bash
-Você: Cria um projeto REST API em Go com:
-      - CRUD de usuários
-      - Autenticação JWT
-      - Testes unitários
-      - Dockerfile
-      - README
-
-🤖: [Cria estrutura completa do projeto]
-```
-
-### Análise e refatoração
-```bash
-Você: Analisa o código e refatora seguindo Clean Code
-
-🤖: [Analisa, sugere melhorias e aplica refatorações]
-```
-
-### Debug com pesquisa
-```bash
-Você: Estou tendo erro X no código, pesquise soluções e corrija
-
-🤖: 🌐 Pesquisando...
-    [Encontra solução, aplica correção]
-```
-
----
-
-## ⚠️ Avisos Importantes
-
-1. **Modo Autônomo**: Use com cuidado! Todas as ações são executadas sem confirmação.
-2. **GPU**: Para melhor performance, configure todas as layers para rodar na GPU.
-3. **Proxy Corporativo**: Use os scripts de download direto para baixar modelos.
-4. **Backup**: Sempre faça backup antes de usar modo autônomo.
-
----
-
-## 🎯 Roadmap
-
-### Base (10-12 dias)
-- [x] Detecção inteligente de intenções
-- [x] 3 modos de operação
-- [x] Pesquisa na internet
-- [x] Suporte a imagens
-- [x] Streaming de respostas
-- [x] 8+ ferramentas integradas
-
-### Enterprise (24 dias adicionais)
-- [x] **Checkpoints & Rewind** - Recuperação de estado
-- [x] **Session Management** - Múltiplas sessões, resumir
-- [x] **Hierarchical Memory** - CLAUDE.md em 5 níveis
-- [x] **40+ Slash Commands** - Customizáveis
-- [x] **Hooks System** - Pre/Post execution
-- [x] **Telemetry** - OpenTelemetry, métricas
-- [x] **Sandboxing** - Isolamento de processos
-- [x] **/doctor** - Health checks & diagnostics
-- [x] **Background Tasks** - Async execution
-- [x] **CI/CD** - GitHub Actions, GitLab
-
-### Futuro
-- [ ] Cache de embeddings (Redis)
-- [ ] Suporte a plugins MCP
-- [ ] Interface web
-- [ ] Integração com VS Code
-
----
+**Formas de contribuir:**
+- 🐛 Reportar bugs
+- 💡 Sugerir funcionalidades
+- 📝 Melhorar documentação
+- 🔧 Enviar pull requests
+- ⭐ Dar uma estrela no projeto!
 
 ## 📄 Licença
 
-Apache 2.0 - Veja [LICENSE](LICENSE)
-
----
-
-## 👤 Autor
-
-Criado como especificação técnica completa para implementação por IA.
-
-**Hardware alvo:** PC high-end com i9 14ª gen, 64GB RAM, RTX Ada 2000
-
----
+MIT License - Veja [LICENSE](LICENSE)
 
 ## 🙏 Agradecimentos
 
-- **Ollama** - Por fornecer uma forma simples de rodar LLMs localmente
-- **QWen 2.5 Coder** - Modelo state-of-the-art para código
-- **Claude Code** - Inspiração para o design do sistema
+- [Ollama](https://ollama.com) - Por tornar IA local possível
+- [awesome-claude-code](https://github.com/hesreallyhim/awesome-claude-code) - Inspiração
+- Comunidade Go - Por ferramentas incríveis
 
 ---
 
-**🚀 Comece agora:**
-```bash
-git clone <repo>
-cd ollama-code
-make install
-ollama-code chat
-```
+**Feito com ❤️ e IA local no Brasil 🇧🇷**
+
+⭐ Se você gostou, dê uma estrela no projeto!
