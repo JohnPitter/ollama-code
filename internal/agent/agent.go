@@ -205,7 +205,7 @@ func (a *Agent) handleIntent(ctx context.Context, result *intent.DetectionResult
 		return a.handleGitOperation(ctx, result)
 
 	case intent.IntentWebSearch:
-		return a.handleWebSearch(ctx, result)
+		return a.handleWebSearch(ctx, result, userMessage)
 
 	case intent.IntentQuestion:
 		return a.handleQuestion(ctx, userMessage)

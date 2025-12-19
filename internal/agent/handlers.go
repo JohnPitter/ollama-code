@@ -282,10 +282,11 @@ func (a *Agent) handleGitOperation(ctx context.Context, result *intent.Detection
 }
 
 // handleWebSearch processa pesquisa web
-func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionResult) (string, error) {
+func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionResult, userMessage string) (string, error) {
 	query, ok := result.Parameters["query"].(string)
 	if !ok || query == "" {
-		return "Erro: termo de busca não especificado", nil
+		// Fallback: usar a mensagem do usuário como query
+		query = userMessage
 	}
 
 	a.colorBlue.Printf("🌐 Pesquisando na web: %s\n", query)
@@ -295,7 +296,40 @@ func (a *Agent) handleWebSearch(ctx context.Context, result *intent.DetectionRes
 		return fmt.Sprintf("Erro ao pesquisar: %v", err), nil
 	}
 
-	return fmt.Sprintf("Encontrados %d resultados para '%s'", len(results), query), nil
+	if len(results) == 0 {
+		return "Nenhum resultado encontrado na web.", nil
+	}
+
+	// Formatar resultados para o LLM sintetizar
+	resultsText := fmt.Sprintf("Encontrei %d resultados para '%s':\n\n", len(results), query)
+	for i, r := range results {
+		if i >= 3 { // Limitar a 3 resultados
+			break
+		}
+		resultsText += fmt.Sprintf("%d. %s\n   %s\n   URL: %s\n\n", i+1, r.Title, r.Snippet, r.URL)
+	}
+
+	// Usar LLM para sintetizar a resposta baseada nos resultados
+	prompt := fmt.Sprintf(`Com base nos resultados da pesquisa abaixo, responda à pergunta do usuário: "%s"
+
+%s
+
+Forneça uma resposta clara e concisa baseada nas informações encontradas. Se relevante, cite as fontes.`, userMessage, resultsText)
+
+	messages := []llm.Message{
+		{Role: "user", Content: prompt},
+	}
+
+	response, err := a.llmClient.Complete(ctx, messages, &llm.CompletionOptions{
+		Temperature: 0.7,
+		MaxTokens:   1000,
+	})
+	if err != nil {
+		// Se falhar, retornar apenas os resultados formatados
+		return resultsText, nil
+	}
+
+	return response, nil
 }
 
 // handleQuestion processa pergunta simples

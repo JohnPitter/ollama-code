@@ -18,7 +18,8 @@
       "Bash(go test:*)",
       "Bash(go build:*)",
       "Bash(ollama list:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(timeout 60 ./build/ollama-code:*)"
     ],
     "deny": [],
     "ask": []
