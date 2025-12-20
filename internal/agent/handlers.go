@@ -66,6 +66,12 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 		return a.handleBugFix(ctx, userMessage, recentlyModified[0])
 	}
 
+	// Detectar se é uma requisição de múltiplos arquivos
+	isMultiFile := detectMultiFileRequest(userMessage)
+	if isMultiFile {
+		return a.handleMultiFileWrite(ctx, userMessage)
+	}
+
 	// Se conteúdo não foi especificado, significa que o usuário quer que geremos
 	if content == "" {
 		a.colorBlue.Println("💭 Gerando conteúdo...")
@@ -864,4 +870,203 @@ Retorne o código COMPLETO corrigido (não apenas a parte modificada).`, filePat
 	}
 
 	return fmt.Sprintf("✓ Arquivo corrigido: %s", filePath), nil
+}
+
+// detectMultiFileRequest detecta se usuário quer criar múltiplos arquivos
+func detectMultiFileRequest(message string) bool {
+	msgLower := strings.ToLower(message)
+
+	multiFileKeywords := []string{
+		"separados", "separadas",
+		"múltiplos arquivos", "multiplos arquivos",
+		"vários arquivos", "varios arquivos",
+		"html, css e javascript", "html, css e js",
+		"html e css separados", "html e css separadas",
+		"html, css", "css, js", "html, js",
+		"arquivo html e css", "arquivo css e js",
+		"com estrutura de pastas",
+		"projeto completo",
+		"full-stack",
+		"frontend e backend",
+		"cliente e servidor",
+	}
+
+	for _, keyword := range multiFileKeywords {
+		if strings.Contains(msgLower, keyword) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// handleMultiFileWrite processa criação de múltiplos arquivos
+func (a *Agent) handleMultiFileWrite(ctx context.Context, userMessage string) (string, error) {
+	a.colorBlue.Println("📦 Detectada requisição de múltiplos arquivos...")
+	a.colorBlue.Println("💭 Gerando projeto com múltiplos arquivos...")
+
+	// Prompt para LLM gerar múltiplos arquivos
+	multiFilePrompt := fmt.Sprintf(`Você é um assistente de programação. O usuário pediu:
+
+"%s"
+
+TAREFA:
+Gere um projeto com MÚLTIPLOS ARQUIVOS conforme solicitado.
+
+Responda APENAS com um JSON no seguinte formato:
+{
+  "files": [
+    {
+      "file_path": "index.html",
+      "content": "conteúdo completo do HTML aqui"
+    },
+    {
+      "file_path": "style.css",
+      "content": "conteúdo completo do CSS aqui"
+    },
+    {
+      "file_path": "script.js",
+      "content": "conteúdo completo do JavaScript aqui"
+    }
+  ]
+}
+
+REGRAS IMPORTANTES:
+1. Crie TODOS os arquivos solicitados pelo usuário
+2. Se for "HTML, CSS e JavaScript separados": crie 3 arquivos
+3. HTML deve referenciar CSS com <link rel="stylesheet" href="...">
+4. HTML deve referenciar JS com <script src="..."></script>
+5. Use nomes de arquivo apropriados (index.html, style.css, script.js, etc.)
+6. Cada arquivo deve ter conteúdo COMPLETO e funcional
+7. Arquivos devem estar corretamente linkados entre si
+8. Use boas práticas de código
+9. Não inclua explicações fora do JSON
+
+EXEMPLO de resposta correta:
+{
+  "files": [
+    {"file_path": "index.html", "content": "<!DOCTYPE html>..."},
+    {"file_path": "style.css", "content": "body { ... }"},
+    {"file_path": "script.js", "content": "console.log('...');"}
+  ]
+}`, userMessage)
+
+	llmResponse, err := a.llmClient.Complete(ctx, []llm.Message{
+		{Role: "user", Content: multiFilePrompt},
+	}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 4000})
+
+	if err != nil {
+		return "Erro ao gerar arquivos", err
+	}
+
+	// Parse JSON (não usar parseJSON pois valida file_path que não existe em multi-file)
+	jsonStr := strings.TrimSpace(llmResponse)
+	jsonStr = strings.TrimPrefix(jsonStr, "```json")
+	jsonStr = strings.TrimPrefix(jsonStr, "```")
+	jsonStr = strings.TrimSuffix(jsonStr, "```")
+	jsonStr = strings.TrimSpace(jsonStr)
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
+		a.colorYellow.Printf("⚠️  Erro ao parsear JSON de múltiplos arquivos: %v\n", err)
+		a.colorYellow.Println("⚠️  Tentando criar arquivo único...")
+		// Fallback para criação de arquivo único
+		return a.generateAndWriteFileSimple(ctx, userMessage)
+	}
+
+	// Extrair array de arquivos
+	filesInterface, ok := parsed["files"]
+	if !ok {
+		a.colorYellow.Println("⚠️  Campo 'files' não encontrado, tentando arquivo único...")
+		return a.generateAndWriteFileSimple(ctx, userMessage)
+	}
+
+	filesArray, ok := filesInterface.([]interface{})
+	if !ok {
+		a.colorYellow.Println("⚠️  'files' não é um array, tentando arquivo único...")
+		return a.generateAndWriteFileSimple(ctx, userMessage)
+	}
+
+	if len(filesArray) == 0 {
+		return "Erro: nenhum arquivo foi gerado", nil
+	}
+
+	a.colorGreen.Printf("📁 %d arquivos serão criados:\n", len(filesArray))
+
+	// Processar cada arquivo
+	var createdFiles []string
+	var failedFiles []string
+
+	for i, fileInterface := range filesArray {
+		fileMap, ok := fileInterface.(map[string]interface{})
+		if !ok {
+			a.colorYellow.Printf("⚠️  Arquivo %d tem formato inválido, pulando...\n", i+1)
+			continue
+		}
+
+		filePath, ok := fileMap["file_path"].(string)
+		if !ok || filePath == "" {
+			a.colorYellow.Printf("⚠️  Arquivo %d sem caminho válido, pulando...\n", i+1)
+			continue
+		}
+
+		content, ok := fileMap["content"].(string)
+		if !ok || content == "" {
+			a.colorYellow.Printf("⚠️  Arquivo %s sem conteúdo, pulando...\n", filePath)
+			failedFiles = append(failedFiles, filePath)
+			continue
+		}
+
+		a.colorBlue.Printf("   - %s (%d bytes)\n", filePath, len(content))
+
+		// Pedir confirmação se necessário (apenas uma vez para o projeto todo)
+		if a.mode.RequiresConfirmation() && i == 0 {
+			filesList := ""
+			for _, f := range filesArray {
+				if fm, ok := f.(map[string]interface{}); ok {
+					if fp, ok := fm["file_path"].(string); ok {
+						filesList += fmt.Sprintf("   - %s\n", fp)
+					}
+				}
+			}
+
+			preview := fmt.Sprintf("Projeto com %d arquivos:\n%s", len(filesArray), filesList)
+			confirmed, err := a.confirmManager.ConfirmWithPreview("Criar projeto multi-file", preview)
+
+			if err != nil || !confirmed {
+				return "✗ Operação cancelada pelo usuário", nil
+			}
+		}
+
+		// Criar arquivo
+		toolResult, err := a.toolRegistry.Execute(ctx, "file_writer", map[string]interface{}{
+			"file_path": filePath,
+			"content":   content,
+			"mode":      "create",
+		})
+
+		if err != nil || !toolResult.Success {
+			a.colorRed.Printf("✗ Erro ao criar %s: %s\n", filePath, toolResult.Error)
+			failedFiles = append(failedFiles, filePath)
+		} else {
+			a.colorGreen.Printf("✓ %s criado\n", filePath)
+			createdFiles = append(createdFiles, filePath)
+			a.AddRecentFile(filePath)
+		}
+	}
+
+	// Resumo
+	summary := fmt.Sprintf("\n✓ Projeto criado com %d arquivo(s):", len(createdFiles))
+	for _, file := range createdFiles {
+		summary += fmt.Sprintf("\n   - %s", file)
+	}
+
+	if len(failedFiles) > 0 {
+		summary += fmt.Sprintf("\n\n⚠️  %d arquivo(s) falharam:", len(failedFiles))
+		for _, file := range failedFiles {
+			summary += fmt.Sprintf("\n   - %s", file)
+		}
+	}
+
+	return summary, nil
 }
