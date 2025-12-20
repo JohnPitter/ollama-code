@@ -477,7 +477,7 @@ IMPORTANTE:
 
 	a.colorGreen.Println("\n🤖 Assistente:")
 
-	response, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
+	_, err = a.llmClient.CompleteStreaming(ctx, []llm.Message{
 		{Role: "user", Content: prompt},
 	}, &llm.CompletionOptions{
 		Temperature: 0.7,
@@ -492,7 +492,8 @@ IMPORTANTE:
 		return contextBuilder.String(), nil
 	}
 
-	return response, nil
+	// Resposta já foi impressa via streaming, retornar vazio para evitar duplicação
+	return "", nil
 }
 
 // synthesizeFromSnippets sintetiza resposta apenas com snippets (fallback)
@@ -530,7 +531,7 @@ IMPORTANTE:
 
 	a.colorGreen.Println("\n🤖 Assistente:")
 
-	response, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
+	_, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
 		{Role: "user", Content: prompt},
 	}, &llm.CompletionOptions{
 		Temperature: 0.7,
@@ -545,7 +546,8 @@ IMPORTANTE:
 		return resultsText, nil
 	}
 
-	return response, nil
+	// Resposta já foi impressa via streaming, retornar vazio para evitar duplicação
+	return "", nil
 }
 
 // min retorna o menor de dois inteiros
