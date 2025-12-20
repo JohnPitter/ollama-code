@@ -74,35 +74,37 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 
 	// Se conteúdo não foi especificado, significa que o usuário quer que geremos
 	if content == "" {
-		a.colorBlue.Println("💭 Gerando conteúdo...")
+		a.colorBlue.Print("💭 Gerando conteúdo")
 
 		// Usar LLM para gerar o conteúdo baseado na descrição do usuário
 		generationPrompt := fmt.Sprintf(`Você é um assistente de programação. O usuário pediu:
 
 "%s"
 
-TAREFA:
-1. Identifique o tipo de arquivo que o usuário quer criar
-2. Identifique o nome/caminho do arquivo (se não especificado, sugira um apropriado)
-3. Gere o conteúdo completo do arquivo conforme solicitado
-
 Responda APENAS com um JSON no seguinte formato:
 {
-  "file_path": "caminho/do/arquivo.ext",
-  "content": "conteúdo completo do arquivo aqui",
+  "file_path": "nome_do_arquivo.ext",
+  "content": "código completo aqui",
   "mode": "create"
 }
 
-IMPORTANTE:
-- O campo "content" deve conter TODO o código/conteúdo solicitado
-- Use boas práticas de código
-- Adicione comentários quando apropriado
-- Se for HTML/CSS, crie algo visualmente atraente
+Regras:
+- Gere código funcional e completo
+- Use boas práticas
 - Não inclua explicações fora do JSON`, userMessage)
 
-		llmResponse, err := a.llmClient.Complete(ctx, []llm.Message{
+		// Usar streaming com indicador de progresso
+		dotCount := 0
+		llmResponse, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
 			{Role: "user", Content: generationPrompt},
-		}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 3000})
+		}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 2000}, func(chunk string) {
+			// Mostrar progresso com pontos
+			if dotCount < 30 {
+				fmt.Print(".")
+				dotCount++
+			}
+		})
+		fmt.Println() // nova linha após progresso
 
 		if err != nil {
 			return "Erro ao gerar conteúdo", err
@@ -603,18 +605,26 @@ func parseJSON(jsonStr string, result *map[string]interface{}) error {
 
 // generateAndWriteFileSimple método simplificado para gerar e escrever arquivo (fallback)
 func (a *Agent) generateAndWriteFileSimple(ctx context.Context, userMessage string) (string, error) {
-	a.colorYellow.Println("🔄 Tentando método alternativo de geração...")
+	a.colorYellow.Print("🔄 Método alternativo")
 
 	// Prompt mais direto
 	prompt := fmt.Sprintf(`O usuário pediu: "%s"
 
-Gere o código/conteúdo completo solicitado.
-Comece sua resposta com o nome do arquivo na primeira linha (ex: index.html).
-Depois, nas linhas seguintes, coloque todo o conteúdo do arquivo.`, userMessage)
+Gere o código completo solicitado.
+Primeira linha: nome do arquivo (ex: index.html)
+Linhas seguintes: código completo`, userMessage)
 
-	response, err := a.llmClient.Complete(ctx, []llm.Message{
+	// Usar streaming com progresso
+	dotCount := 0
+	response, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
 		{Role: "user", Content: prompt},
-	}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 3000})
+	}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 2000}, func(chunk string) {
+		if dotCount < 20 {
+			fmt.Print(".")
+			dotCount++
+		}
+	})
+	fmt.Println()
 
 	if err != nil {
 		return "Erro ao gerar conteúdo", err
@@ -905,57 +915,40 @@ func detectMultiFileRequest(message string) bool {
 // handleMultiFileWrite processa criação de múltiplos arquivos
 func (a *Agent) handleMultiFileWrite(ctx context.Context, userMessage string) (string, error) {
 	a.colorBlue.Println("📦 Detectada requisição de múltiplos arquivos...")
-	a.colorBlue.Println("💭 Gerando projeto com múltiplos arquivos...")
+	a.colorBlue.Print("💭 Gerando projeto")
 
-	// Prompt para LLM gerar múltiplos arquivos
+	// Prompt para LLM gerar múltiplos arquivos (simplificado)
 	multiFilePrompt := fmt.Sprintf(`Você é um assistente de programação. O usuário pediu:
 
 "%s"
 
-TAREFA:
-Gere um projeto com MÚLTIPLOS ARQUIVOS conforme solicitado.
-
-Responda APENAS com um JSON no seguinte formato:
+Responda APENAS com JSON:
 {
   "files": [
-    {
-      "file_path": "index.html",
-      "content": "conteúdo completo do HTML aqui"
-    },
-    {
-      "file_path": "style.css",
-      "content": "conteúdo completo do CSS aqui"
-    },
-    {
-      "file_path": "script.js",
-      "content": "conteúdo completo do JavaScript aqui"
-    }
+    {"file_path": "index.html", "content": "código HTML completo"},
+    {"file_path": "style.css", "content": "código CSS completo"},
+    {"file_path": "script.js", "content": "código JS completo"}
   ]
 }
 
-REGRAS IMPORTANTES:
-1. Crie TODOS os arquivos solicitados pelo usuário
-2. Se for "HTML, CSS e JavaScript separados": crie 3 arquivos
-3. HTML deve referenciar CSS com <link rel="stylesheet" href="...">
-4. HTML deve referenciar JS com <script src="..."></script>
-5. Use nomes de arquivo apropriados (index.html, style.css, script.js, etc.)
-6. Cada arquivo deve ter conteúdo COMPLETO e funcional
-7. Arquivos devem estar corretamente linkados entre si
-8. Use boas práticas de código
-9. Não inclua explicações fora do JSON
+Regras:
+- Crie TODOS os arquivos solicitados
+- HTML deve ter <link rel="stylesheet" href="..."> e <script src="...">
+- Código funcional e completo
+- Não inclua explicações fora do JSON`, userMessage)
 
-EXEMPLO de resposta correta:
-{
-  "files": [
-    {"file_path": "index.html", "content": "<!DOCTYPE html>..."},
-    {"file_path": "style.css", "content": "body { ... }"},
-    {"file_path": "script.js", "content": "console.log('...');"}
-  ]
-}`, userMessage)
-
-	llmResponse, err := a.llmClient.Complete(ctx, []llm.Message{
+	// Usar streaming com indicador de progresso
+	dotCount := 0
+	llmResponse, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
 		{Role: "user", Content: multiFilePrompt},
-	}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 4000})
+	}, &llm.CompletionOptions{Temperature: 0.7, MaxTokens: 3000}, func(chunk string) {
+		// Mostrar progresso com pontos
+		if dotCount < 30 {
+			fmt.Print(".")
+			dotCount++
+		}
+	})
+	fmt.Println() // nova linha após progresso
 
 	if err != nil {
 		return "Erro ao gerar arquivos", err
