@@ -57,6 +57,13 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 	content, _ := result.Parameters["content"].(string)
 	mode, _ := result.Parameters["mode"].(string)
 
+	// Detectar se é uma edição de arquivo existente
+	isEdit, editFilePath := detectEditRequest(userMessage)
+	if isEdit && editFilePath != "" {
+		// Usuário quer editar arquivo existente
+		return a.handleFileEdit(ctx, userMessage, editFilePath)
+	}
+
 	// Detectar se é uma correção de arquivo recente
 	recentlyModified := a.GetRecentlyModifiedFiles()
 	isBugFix := detectBugReport(userMessage)
@@ -135,6 +142,8 @@ Regras:
 		}
 		if c, ok := parsed["content"].(string); ok && c != "" {
 			content = c
+			// Limpar possíveis wrappers e artefatos
+			content = cleanCodeContent(content)
 		}
 		if m, ok := parsed["mode"].(string); ok && m != "" {
 			mode = m
@@ -650,7 +659,7 @@ Linha 2+: código`, userMessage)
 	filePath := strings.TrimSpace(lines[0])
 	content := strings.Join(lines[1:], "\n")
 
-	// Limpar possíveis marcadores markdown
+	// Limpar possíveis marcadores markdown do filename
 	filePath = strings.TrimPrefix(filePath, "# ")
 	filePath = strings.TrimPrefix(filePath, "## ")
 	filePath = strings.TrimPrefix(filePath, "### ")
@@ -658,14 +667,8 @@ Linha 2+: código`, userMessage)
 	filePath = strings.TrimPrefix(filePath, "Nome: ")
 	filePath = strings.TrimSpace(filePath)
 
-	content = strings.TrimPrefix(content, "```html")
-	content = strings.TrimPrefix(content, "```css")
-	content = strings.TrimPrefix(content, "```javascript")
-	content = strings.TrimPrefix(content, "```python")
-	content = strings.TrimPrefix(content, "```go")
-	content = strings.TrimPrefix(content, "```")
-	content = strings.TrimSuffix(content, "```")
-	content = strings.TrimSpace(content)
+	// Limpar wrappers e artefatos do content
+	content = cleanCodeContent(content)
 
 	// Validar nome de arquivo
 	if !isValidFilename(filePath) {
@@ -789,6 +792,260 @@ func isValidFilename(filename string) bool {
 	}
 
 	return true
+}
+
+// detectEditRequest detecta se usuário quer editar arquivo existente e retorna nome do arquivo
+func detectEditRequest(message string) (bool, string) {
+	msgLower := strings.ToLower(message)
+
+	// Keywords que indicam edição de arquivo existente
+	editKeywords := []string{
+		"adiciona",
+		"adiciona no",
+		"edita",
+		"edita o",
+		"modifica",
+		"modifica o",
+		"atualiza",
+		"atualiza o",
+		"muda",
+		"muda o",
+		"altera",
+		"altera o",
+		"insere",
+		"insere no",
+	}
+
+	// Verificar se mensagem contém keyword de edição
+	isEdit := false
+	for _, keyword := range editKeywords {
+		if strings.Contains(msgLower, keyword) {
+			isEdit = true
+			break
+		}
+	}
+
+	if !isEdit {
+		return false, ""
+	}
+
+	// Tentar extrair nome do arquivo
+	// Procurar por palavras que parecem nome de arquivo (tem extensão válida)
+	words := strings.Fields(message)
+	var foundFile string
+
+	for i, word := range words {
+		// Limpar pontuação
+		cleanWord := strings.Trim(word, ".,;:!?\"'")
+
+		// Se encontrou "arquivo" ou "no" ou "em", próxima palavra pode ser o nome
+		if strings.ToLower(word) == "arquivo" || strings.ToLower(word) == "no" || strings.ToLower(word) == "em" {
+			if i+1 < len(words) {
+				potentialFile := strings.Trim(words[i+1], ".,;:!?\"'")
+				if isValidFilename(potentialFile) {
+					foundFile = potentialFile
+					break
+				}
+			}
+		}
+
+		// Também procurar por nomes de arquivo diretamente
+		if isValidFilename(cleanWord) {
+			foundFile = cleanWord
+			break
+		}
+	}
+
+	// Só retorna true se encontrou TANTO keyword de edição QUANTO nome de arquivo
+	if isEdit && foundFile != "" {
+		return true, foundFile
+	}
+
+	return false, ""
+}
+
+// handleFileEdit lida com edição de arquivo existente fazendo merge inteligente
+func (a *Agent) handleFileEdit(ctx context.Context, userMessage, filePath string) (string, error) {
+	a.colorYellow.Printf("✏️  Editando arquivo existente: %s\n", filePath)
+
+	// 1. Ler arquivo atual
+	a.colorBlue.Println("📖 Lendo conteúdo atual...")
+	toolResult, err := a.toolRegistry.Execute(ctx, "file_reader", map[string]interface{}{
+		"file_path": filePath,
+	})
+
+	if err != nil || !toolResult.Success {
+		// Se arquivo não existe, criar novo
+		a.colorYellow.Printf("⚠️  Arquivo não existe, será criado como novo\n")
+		return a.handleWriteFile(ctx, &intent.DetectionResult{
+			Intent: intent.IntentWriteFile,
+			Parameters: map[string]interface{}{
+				"file_path": filePath,
+			},
+		}, userMessage)
+	}
+
+	currentContent := toolResult.Data
+
+	// 2. Usar LLM para fazer merge inteligente
+	a.colorBlue.Print("🔄 Mesclando mudanças")
+
+	mergePrompt := fmt.Sprintf(`Você é um assistente de programação. O usuário tem um arquivo com o seguinte conteúdo:
+
+<arquivo_atual>
+%s
+</arquivo_atual>
+
+O usuário pediu: "%s"
+
+Sua tarefa: Editar o arquivo PRESERVANDO o código existente e adicionando/modificando conforme solicitado.
+
+IMPORTANTE: Retorne APENAS o código completo do arquivo editado, SEM explicações, SEM JSON, SEM markdown.
+Primeira linha deve ser a primeira linha do código.
+Última linha deve ser a última linha do código.
+
+Regras:
+- PRESERVE todo código existente que não precisa ser alterado
+- ADICIONE o novo código no local apropriado
+- MANTENHA a estrutura e formatação do arquivo
+- NÃO remova funções/métodos existentes a menos que explicitamente solicitado
+- Se adicionar função, coloque após funções existentes
+- Mantenha imports/includes existentes`, currentContent, userMessage)
+
+	dotCount := 0
+	newContent, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
+		{Role: "user", Content: mergePrompt},
+	}, &llm.CompletionOptions{Temperature: 0.3, MaxTokens: 4000}, func(chunk string) {
+		if dotCount < 30 {
+			fmt.Print(".")
+			dotCount++
+		}
+	})
+	fmt.Println()
+
+	if err != nil {
+		return "Erro ao mesclar mudanças", err
+	}
+
+	// Limpar possíveis markdown code blocks e wrappers
+	newContent = cleanCodeContent(newContent)
+
+	// 3. Mostrar diff (preview das mudanças)
+	a.colorGreen.Printf("\n📝 Mudanças detectadas:\n")
+	fmt.Printf("Arquivo: %s\n", filePath)
+	fmt.Printf("Tamanho original: %d bytes\n", len(currentContent))
+	fmt.Printf("Tamanho novo: %d bytes\n", len(newContent))
+
+	// 4. Confirmar se necessário
+	if a.mode.RequiresConfirmation() {
+		preview := fmt.Sprintf("Arquivo: %s\nTamanho: %d → %d bytes\n\nNovo conteúdo:\n%s",
+			filePath, len(currentContent), len(newContent), truncate(newContent, 500))
+
+		confirmed, err := a.confirmManager.ConfirmWithPreview(
+			"Salvar mudanças",
+			preview,
+		)
+
+		if err != nil || !confirmed {
+			return "✗ Operação cancelada pelo usuário", nil
+		}
+	}
+
+	// 5. Salvar arquivo editado
+	saveResult, err := a.toolRegistry.Execute(ctx, "file_writer", map[string]interface{}{
+		"file_path": filePath,
+		"content":   newContent,
+		"mode":      "create", // Sobrescreve mas preservamos conteúdo via merge
+	})
+
+	if err != nil || !saveResult.Success {
+		return fmt.Sprintf("Erro ao salvar arquivo: %s", saveResult.Error), nil
+	}
+
+	// Registrar como recentemente modificado
+	a.AddRecentFile(filePath)
+
+	return fmt.Sprintf("✓ Arquivo editado com sucesso: %s", filePath), nil
+}
+
+// cleanCodeContent remove wrappers JSON, markdown e outros artefatos do código gerado
+func cleanCodeContent(content string) string {
+	content = strings.TrimSpace(content)
+
+	// 1. Remover JSON wrapper se presente: {"content": "código"}
+	if strings.HasPrefix(content, "{") && strings.Contains(content, `"content":`) {
+		// Tentar extrair content do JSON
+		startIdx := strings.Index(content, `"content":`)
+		if startIdx != -1 {
+			// Pular até o valor
+			startIdx += len(`"content":`)
+			content = content[startIdx:]
+			content = strings.TrimSpace(content)
+			// Remover aspas iniciais
+			content = strings.TrimPrefix(content, `"`)
+			// Encontrar fim do valor (última aspas antes de })
+			endIdx := strings.LastIndex(content, `"`)
+			if endIdx != -1 {
+				content = content[:endIdx]
+			}
+			// Decodificar escapes (\n → newline)
+			content = strings.ReplaceAll(content, `\n`, "\n")
+			content = strings.ReplaceAll(content, `\t`, "\t")
+			content = strings.ReplaceAll(content, `\"`, `"`)
+		}
+	}
+
+	content = strings.TrimSpace(content)
+
+	// 2. Remover markdown code blocks (```language ... ```)
+	content = strings.TrimPrefix(content, "```")
+	content = strings.TrimSuffix(content, "```")
+	content = strings.TrimSpace(content)
+
+	// 3. Remover nome de linguagem na primeira linha se presente
+	lines := strings.Split(content, "\n")
+	if len(lines) > 0 {
+		firstLine := strings.ToLower(strings.TrimSpace(lines[0]))
+		// Lista de linguagens comuns que podem aparecer
+		languages := []string{"go", "python", "javascript", "java", "rust", "cpp", "c", "html", "css", "json", "yaml", "bash", "sh"}
+		for _, lang := range languages {
+			if firstLine == lang || firstLine == "```"+lang {
+				// Remover primeira linha
+				lines = lines[1:]
+				break
+			}
+		}
+		content = strings.Join(lines, "\n")
+	}
+
+	content = strings.TrimSpace(content)
+
+	// 4. Remover chaves extras se arquivo começar e terminar com { }
+	// (possível resíduo de JSON)
+	if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
+		// Verificar se não é código válido (struct, objeto, etc)
+		// Se segunda linha não é código, é provável que seja wrapper
+		testLines := strings.Split(content, "\n")
+		if len(testLines) > 1 {
+			secondLine := strings.TrimSpace(testLines[1])
+			// Se segunda linha não parece código (não tem keywords), é wrapper
+			if !strings.Contains(secondLine, "package") &&
+				!strings.Contains(secondLine, "import") &&
+				!strings.Contains(secondLine, "func") &&
+				!strings.Contains(secondLine, "class") &&
+				!strings.Contains(secondLine, "def") &&
+				!strings.Contains(secondLine, "const") &&
+				!strings.Contains(secondLine, "var") &&
+				!strings.Contains(secondLine, "let") {
+				// É wrapper, remover primeira e última linha
+				if len(testLines) > 2 {
+					content = strings.Join(testLines[1:len(testLines)-1], "\n")
+				}
+			}
+		}
+	}
+
+	return strings.TrimSpace(content)
 }
 
 // truncate trunca string para tamanho máximo
