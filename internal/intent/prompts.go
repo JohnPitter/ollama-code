@@ -7,10 +7,20 @@ Sua tarefa é analisar mensagens do usuário e identificar qual é a intenção 
 
 INTENÇÕES DISPONÍVEIS:
 
-1. read_file - Usuário quer ler/ver conteúdo de arquivo(s)
-   Exemplos: "leia o main.go", "mostre o README", "qual o conteúdo de config.yaml"
+1. read_file - Usuário quer ler/ver/analisar/explicar/revisar conteúdo de arquivo(s)
+   Exemplos:
+   - "leia o main.go"
+   - "mostre o README"
+   - "qual o conteúdo de config.yaml"
+   - "analisa a função handleWriteFile em handlers.go"
+   - "explica o que faz o arquivo agent.go"
+   - "faz code review do main.go"
+   - "revisa o código em utils.go"
+   - "examina a struct User"
 
-2. write_file - Usuário quer criar, desenvolver, gerar ou editar código/arquivo
+   IMPORTANTE: Verbos de ANÁLISE (analisa, explica, revisa, examina, review) + arquivo específico = read_file!
+
+2. write_file - Usuário quer criar, desenvolver, gerar, editar ou refatorar código/arquivo
    Exemplos:
    - "crie um arquivo test.go"
    - "adicione logging no main.go"
@@ -21,8 +31,14 @@ INTENÇÕES DISPONÍVEIS:
    - "gera um componente React"
    - "escreve uma API REST"
    - "constrói uma aplicação"
+   - "refatora a função cleanCodeContent para ser mais eficiente" (REFATORAÇÃO)
+   - "otimiza o código do projeto"
+   - "melhora a performance da função X"
 
-   IMPORTANTE: Se o usuário pede para CRIAR/DESENVOLVER/FAZER/GERAR código, é write_file, NÃO web_search!
+   IMPORTANTE:
+   - CRIAR/DESENVOLVER/FAZER/GERAR código → write_file (NÃO web_search!)
+   - REFATORAR/OTIMIZAR/MELHORAR código existente → write_file (vai ler e reescrever)
+   - Mas apenas ANALISAR/EXPLICAR/REVISAR código → read_file!
 
 3. execute_command - Usuário quer executar comando shell
    Exemplos: "rode os testes", "execute npm install", "faça build do projeto"
@@ -50,10 +66,15 @@ INTENÇÕES DISPONÍVEIS:
    Exemplos: "o que é REST", "como funciona async/await", "explique closures"
 
 REGRAS DE PRIORIDADE:
-1. Se usuário usa verbos de CRIAÇÃO (criar, desenvolver, fazer, gerar, construir, escrever, implementar) + tecnologia (HTML, Python, React, etc.) → write_file
-2. Se usuário pede para BUSCAR/PESQUISAR informações na internet → web_search
-3. Se usuário faz pergunta conceitual SEM pedir criação → question
-4. Em caso de dúvida entre write_file e web_search: escolha write_file se houver intenção de criar código
+1. Se usuário usa verbos de ANÁLISE (analisa, explica, revisa, examina, review) + arquivo específico → read_file
+2. Se usuário usa verbos de MODIFICAÇÃO (refatora, otimiza, melhora, corrige, fix, debug) + arquivo específico → write_file
+3. Se usuário usa verbos de CRIAÇÃO (criar, desenvolver, fazer, gerar, construir, escrever, implementar) + tecnologia → write_file
+4. Se usuário pede para BUSCAR/PESQUISAR informações na internet → web_search
+5. Se usuário faz pergunta conceitual SEM pedir criação → question
+6. Em caso de dúvida entre análise e modificação:
+   - "analisa/explica/revisa X" → read_file (apenas ler e explicar)
+   - "refatora/otimiza/corrige X" → write_file (ler e modificar)
+   - "encontra bugs em X" → read_file (apenas analisar, não corrigir)
 
 RESPONDA SEMPRE NO FORMATO JSON:
 {
@@ -80,11 +101,19 @@ Contexto:
 Mensagem do usuário:
 "%s"
 
-ATENÇÃO:
-- Se o usuário usa verbos como "cria", "desenvolve", "faz", "gera" + tecnologia (HTML, CSS, Python, etc.) → É write_file!
-- Se o usuário quer informações da internet (temperatura, notícias, documentação online) → É web_search
-- Se o usuário quer criar código/site/aplicação → É write_file
-- Preste atenção no HISTÓRICO DA CONVERSA: se usuário disse anteriormente que quer "o próprio site", significa criar código
-- Leia o contexto completo antes de decidir
+ATENÇÃO - REGRAS DE CLASSIFICAÇÃO:
+- Verbos de ANÁLISE (analisa, explica, revisa, review, examina) + arquivo → read_file
+- Verbos de MODIFICAÇÃO (refatora, otimiza, corrige, melhora, fix, debug) + arquivo → write_file
+- Verbos de CRIAÇÃO (cria, desenvolve, faz, gera, constrói) + tecnologia → write_file
+- Informações da internet (temperatura, notícias, documentação online) → web_search
+- Pergunta conceitual sem ação → question
+
+EXEMPLOS IMPORTANTES:
+- "analisa a função X" → read_file (apenas ler e explicar)
+- "refatora a função X" → write_file (ler e modificar)
+- "faz code review de Y" → read_file (apenas revisar)
+- "encontra e corrige bugs" → write_file (modificar)
+- "encontra bugs" → read_file (apenas analisar)
+- "explica o que faz Z" → read_file (apenas explicar)
 
 Responda APENAS com o JSON, nada mais.`

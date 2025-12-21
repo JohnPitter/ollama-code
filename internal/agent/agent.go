@@ -243,7 +243,7 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 func (a *Agent) handleIntent(ctx context.Context, result *intent.DetectionResult, userMessage string) (string, error) {
 	switch result.Intent {
 	case intent.IntentReadFile:
-		return a.handleReadFile(ctx, result)
+		return a.handleReadFile(ctx, result, userMessage)
 
 	case intent.IntentWriteFile:
 		return a.handleWriteFile(ctx, result, userMessage)
