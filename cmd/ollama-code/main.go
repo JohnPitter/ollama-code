@@ -56,6 +56,7 @@ func main() {
 
 	askCmd.Flags().StringVar(&flagModel, "model", "qwen2.5-coder:7b", "Ollama model to use")
 	askCmd.Flags().StringVar(&flagURL, "url", "http://localhost:11434", "Ollama server URL")
+	askCmd.Flags().StringVarP(&flagMode, "mode", "m", "autonomous", "Operation mode: readonly, interactive, autonomous")
 
 	rootCmd.AddCommand(chatCmd, askCmd)
 
@@ -255,7 +256,7 @@ func runAsk(cmd *cobra.Command, args []string) {
 	cfg := agent.Config{
 		OllamaURL: flagURL,
 		Model:     flagModel,
-		Mode:      modes.ModeReadOnly, // Ask é sempre readonly
+		Mode:      modes.ParseMode(flagMode),
 		WorkDir:   ".",
 	}
 
