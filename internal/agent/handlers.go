@@ -81,7 +81,10 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 
 "%s"
 
-Responda APENAS com um JSON no seguinte formato:
+IMPORTANTE: Responda APENAS com JSON puro, SEM texto adicional antes ou depois.
+Não escreva "Aqui está", "Claro", ou qualquer explicação.
+Retorne SOMENTE o JSON abaixo:
+
 {
   "file_path": "nome_do_arquivo.ext",
   "content": "código completo aqui",
@@ -89,9 +92,12 @@ Responda APENAS com um JSON no seguinte formato:
 }
 
 Regras:
-- Gere código funcional e completo
-- Use boas práticas
-- Não inclua explicações fora do JSON`, userMessage)
+- Primeira linha deve ser { (abre chave JSON)
+- Última linha deve ser } (fecha chave JSON)
+- file_path deve ser nome de arquivo válido (ex: index.html, style.css, main.py)
+- Gere código funcional e completo no campo content
+- Use boas práticas de programação
+- NÃO adicione texto explicativo fora do JSON`, userMessage)
 
 		// Usar streaming com indicador de progresso
 		dotCount := 0
@@ -110,12 +116,8 @@ Regras:
 			return "Erro ao gerar conteúdo", err
 		}
 
-		// Extrair JSON da resposta (LLM pode retornar com ```json ou direto)
-		jsonStr := strings.TrimSpace(llmResponse)
-		jsonStr = strings.TrimPrefix(jsonStr, "```json")
-		jsonStr = strings.TrimPrefix(jsonStr, "```")
-		jsonStr = strings.TrimSuffix(jsonStr, "```")
-		jsonStr = strings.TrimSpace(jsonStr)
+		// Extrair JSON da resposta (LLM pode retornar com ```json, texto antes/depois, etc)
+		jsonStr := extractJSON(llmResponse)
 
 		// Parse do JSON
 		var parsed map[string]interface{}
@@ -142,6 +144,11 @@ Regras:
 	// Validações finais
 	if filePath == "" {
 		return "Erro: não foi possível determinar o caminho do arquivo", nil
+	}
+
+	// Validar nome de arquivo
+	if !isValidFilename(filePath) {
+		return fmt.Sprintf("Erro: nome de arquivo inválido: '%s'\nNome deve ser válido (ex: index.html, style.css)", filePath), nil
 	}
 	if content == "" && mode != "replace" {
 		return "Erro: não foi possível gerar o conteúdo solicitado", nil
@@ -607,12 +614,16 @@ func parseJSON(jsonStr string, result *map[string]interface{}) error {
 func (a *Agent) generateAndWriteFileSimple(ctx context.Context, userMessage string) (string, error) {
 	a.colorYellow.Print("🔄 Método alternativo")
 
-	// Prompt mais direto
+	// Prompt mais direto e explícito
 	prompt := fmt.Sprintf(`O usuário pediu: "%s"
 
-Gere o código completo solicitado.
-Primeira linha: nome do arquivo (ex: index.html)
-Linhas seguintes: código completo`, userMessage)
+IMPORTANTE:
+- Linha 1: APENAS o nome do arquivo (ex: index.html ou style.css ou main.py)
+- Linhas seguintes: código completo
+
+NÃO escreva explicações, apenas:
+Linha 1: nome_do_arquivo.ext
+Linha 2+: código`, userMessage)
 
 	// Usar streaming com progresso
 	dotCount := 0
@@ -641,16 +652,29 @@ Linhas seguintes: código completo`, userMessage)
 
 	// Limpar possíveis marcadores markdown
 	filePath = strings.TrimPrefix(filePath, "# ")
+	filePath = strings.TrimPrefix(filePath, "## ")
+	filePath = strings.TrimPrefix(filePath, "### ")
 	filePath = strings.TrimPrefix(filePath, "Arquivo: ")
+	filePath = strings.TrimPrefix(filePath, "Nome: ")
+	filePath = strings.TrimSpace(filePath)
+
 	content = strings.TrimPrefix(content, "```html")
 	content = strings.TrimPrefix(content, "```css")
+	content = strings.TrimPrefix(content, "```javascript")
+	content = strings.TrimPrefix(content, "```python")
+	content = strings.TrimPrefix(content, "```go")
 	content = strings.TrimPrefix(content, "```")
 	content = strings.TrimSuffix(content, "```")
 	content = strings.TrimSpace(content)
 
-	// Validar
-	if filePath == "" || content == "" {
-		return fmt.Sprintf("Erro: não foi possível gerar arquivo.\nResposta do modelo:\n%s", response), nil
+	// Validar nome de arquivo
+	if !isValidFilename(filePath) {
+		return fmt.Sprintf("Erro: nome de arquivo inválido: '%s'\nResposta completa:\n%s", filePath, truncate(response, 500)), nil
+	}
+
+	// Validar conteúdo
+	if content == "" {
+		return fmt.Sprintf("Erro: conteúdo vazio.\nResposta do modelo:\n%s", response), nil
 	}
 
 	// Mostrar preview
@@ -683,6 +707,88 @@ Linhas seguintes: código completo`, userMessage)
 	}
 
 	return fmt.Sprintf("✓ %s", toolResult.Message), nil
+}
+
+// extractJSON extrai JSON de texto que pode conter lixo ao redor
+func extractJSON(text string) string {
+	// Remover markdown code blocks comuns
+	text = strings.TrimSpace(text)
+	text = strings.TrimPrefix(text, "```json")
+	text = strings.TrimPrefix(text, "```")
+	text = strings.TrimSuffix(text, "```")
+	text = strings.TrimSpace(text)
+
+	// Procurar por JSON usando índices de { e }
+	// Encontra o primeiro { e o último } balanceado
+	firstBrace := strings.Index(text, "{")
+	if firstBrace == -1 {
+		return text // Sem JSON encontrado, retorna original
+	}
+
+	// Contar chaves para encontrar o } correto
+	braceCount := 0
+	lastBrace := -1
+	for i := firstBrace; i < len(text); i++ {
+		if text[i] == '{' {
+			braceCount++
+		} else if text[i] == '}' {
+			braceCount--
+			if braceCount == 0 {
+				lastBrace = i
+				break
+			}
+		}
+	}
+
+	if lastBrace == -1 {
+		return text // JSON incompleto, retorna original
+	}
+
+	// Extrair JSON puro
+	jsonStr := text[firstBrace : lastBrace+1]
+	return strings.TrimSpace(jsonStr)
+}
+
+// isValidFilename verifica se string é um nome de arquivo válido
+func isValidFilename(filename string) bool {
+	// Limpar espaços
+	filename = strings.TrimSpace(filename)
+
+	// Verificações básicas
+	if filename == "" || len(filename) > 255 {
+		return false
+	}
+
+	// Deve ter extensão
+	if !strings.Contains(filename, ".") {
+		return false
+	}
+
+	// Não deve conter caracteres inválidos do Windows
+	invalidChars := []string{"<", ">", ":", "\"", "|", "?", "*", "\n", "\r"}
+	for _, char := range invalidChars {
+		if strings.Contains(filename, char) {
+			return false
+		}
+	}
+
+	// Não deve conter caminhos absolutos ou relativos complexos
+	if strings.Contains(filename, "..") || strings.HasPrefix(filename, "/") || strings.HasPrefix(filename, "\\") {
+		return false
+	}
+
+	// Não deve começar com espaço ou ponto
+	if strings.HasPrefix(filename, " ") || strings.HasPrefix(filename, ".") {
+		return false
+	}
+
+	// Não deve conter frases (espaços demais indicam texto, não filename)
+	spaceCount := strings.Count(filename, " ")
+	if spaceCount > 2 {
+		return false
+	}
+
+	return true
 }
 
 // truncate trunca string para tamanho máximo

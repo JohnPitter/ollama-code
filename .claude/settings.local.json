@@ -26,7 +26,8 @@
       "Bash(tree:*)",
       "Bash(timeout 120 ./build/ollama-code:*)",
       "Bash(timeout 30 ./build/ollama-code chat:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git reset HEAD \"Claro! Aqui está um exemplo de um arquivo HTML chamado \\`index.html\\` que inclui estilos CSS modernos, suporte a dark mode e design responsivo\")"
     ],
     "deny": [],
     "ask": []
