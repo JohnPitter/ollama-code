@@ -143,7 +143,7 @@ Regras:
 		if c, ok := parsed["content"].(string); ok && c != "" {
 			content = c
 			// Limpar possíveis wrappers e artefatos
-			content = cleanCodeContent(content)
+			content = cleanCodeContent(content, filePath)
 		}
 		if m, ok := parsed["mode"].(string); ok && m != "" {
 			mode = m
@@ -668,7 +668,7 @@ Linha 2+: código`, userMessage)
 	filePath = strings.TrimSpace(filePath)
 
 	// Limpar wrappers e artefatos do content
-	content = cleanCodeContent(content)
+	content = cleanCodeContent(content, filePath)
 
 	// Validar nome de arquivo
 	if !isValidFilename(filePath) {
@@ -942,7 +942,7 @@ Regras:
 	}
 
 	// Limpar possíveis markdown code blocks e wrappers
-	newContent = cleanCodeContent(newContent)
+	newContent = cleanCodeContent(newContent, filePath)
 
 	// 3. Mostrar diff (preview das mudanças)
 	a.colorGreen.Printf("\n📝 Mudanças detectadas:\n")
@@ -983,8 +983,13 @@ Regras:
 }
 
 // cleanCodeContent remove wrappers JSON, markdown e outros artefatos do código gerado
-func cleanCodeContent(content string) string {
+// Recebe o filename para detectar tipo de arquivo e evitar limpar JSONs válidos
+func cleanCodeContent(content string, filename string) string {
 	content = strings.TrimSpace(content)
+
+	// Detectar extensão do arquivo
+	isJSON := strings.HasSuffix(strings.ToLower(filename), ".json") ||
+		strings.HasSuffix(strings.ToLower(filename), ".jsonc")
 
 	// 1. Remover JSON wrapper se presente: {"content": "código"}
 	if strings.HasPrefix(content, "{") && strings.Contains(content, `"content":`) {
@@ -1035,8 +1040,9 @@ func cleanCodeContent(content string) string {
 	content = strings.TrimSpace(content)
 
 	// 4. Remover chaves extras se arquivo começar e terminar com { }
-	// (possível resíduo de JSON)
-	if strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
+	// (possível resíduo de JSON wrapper)
+	// IMPORTANTE: NÃO fazer isso para arquivos .json pois são estruturalmente válidos
+	if !isJSON && strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
 		// Verificar se não é código válido (struct, objeto, etc)
 		// Se segunda linha não é código, é provável que seja wrapper
 		testLines := strings.Split(content, "\n")
