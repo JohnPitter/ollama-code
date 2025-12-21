@@ -780,8 +780,13 @@ func isValidFilename(filename string) bool {
 		return false
 	}
 
-	// Não deve começar com espaço ou ponto
-	if strings.HasPrefix(filename, " ") || strings.HasPrefix(filename, ".") {
+	// Não deve começar com espaço
+	if strings.HasPrefix(filename, " ") {
+		return false
+	}
+
+	// Não deve ser apenas "." sozinho (dotfiles como .env são permitidos)
+	if filename == "." {
 		return false
 	}
 
@@ -814,6 +819,15 @@ func detectEditRequest(message string) (bool, string) {
 		"altera o",
 		"insere",
 		"insere no",
+		"corrige",
+		"corrige o",
+		"conserta",
+		"conserta o",
+		"arruma",
+		"arruma o",
+		"resolve",
+		"resolve o",
+		"fix",
 	}
 
 	// Verificar se mensagem contém keyword de edição
