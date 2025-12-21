@@ -439,15 +439,25 @@ func (a *Agent) handleAnalyzeProject(ctx context.Context, result *intent.Detecti
 }
 
 // handleGitOperation processa operação git
-func (a *Agent) handleGitOperation(ctx context.Context, result *intent.DetectionResult) (string, error) {
+func (a *Agent) handleGitOperation(ctx context.Context, result *intent.DetectionResult, userMessage string) (string, error) {
 	if !a.mode.AllowsWrites() {
 		return "❌ Operação bloqueada: modo somente leitura ativo", nil
 	}
 
+	// Tentar obter operation dos parâmetros
 	operation, ok := result.Parameters["operation"].(string)
-	if !ok {
-		operation = "status"
+
+	// Se não veio nos parâmetros, inferir da mensagem do usuário
+	if !ok || operation == "" {
+		operation = detectGitOperation(userMessage)
 	}
+
+	// Garantir que operation está nos parâmetros para o tool
+	params := make(map[string]interface{})
+	for k, v := range result.Parameters {
+		params[k] = v
+	}
+	params["operation"] = operation
 
 	// Confirmação para operações destrutivas
 	if operation != "status" && operation != "diff" && operation != "log" {
@@ -463,13 +473,62 @@ func (a *Agent) handleGitOperation(ctx context.Context, result *intent.Detection
 		}
 	}
 
-	toolResult, err := a.toolRegistry.Execute(ctx, "git_operations", result.Parameters)
+	toolResult, err := a.toolRegistry.Execute(ctx, "git_operations", params)
 
 	if err != nil || !toolResult.Success {
 		return fmt.Sprintf("Erro na operação git: %s", toolResult.Error), nil
 	}
 
+	// Mostrar output se disponível
+	if output, ok := toolResult.Data["output"].(string); ok && output != "" {
+		return fmt.Sprintf("Operação git '%s':\n\n%s", operation, output), nil
+	}
+
 	return fmt.Sprintf("Operação git '%s' executada com sucesso", operation), nil
+}
+
+// detectGitOperation detecta qual operação git o usuário quer executar
+func detectGitOperation(message string) string {
+	msgLower := strings.ToLower(message)
+
+	// Detectar operação específica por keywords
+	if strings.Contains(msgLower, "diff") ||
+	   strings.Contains(msgLower, "diferença") ||
+	   strings.Contains(msgLower, "diferenças") ||
+	   strings.Contains(msgLower, "mudança") ||
+	   strings.Contains(msgLower, "mudanças") ||
+	   strings.Contains(msgLower, "alteraç") ||
+	   strings.Contains(msgLower, "changed") {
+		return "diff"
+	}
+
+	if strings.Contains(msgLower, "log") ||
+	   strings.Contains(msgLower, "histórico") ||
+	   strings.Contains(msgLower, "commits") ||
+	   strings.Contains(msgLower, "history") {
+		return "log"
+	}
+
+	if strings.Contains(msgLower, "add") ||
+	   strings.Contains(msgLower, "staged") ||
+	   (strings.Contains(msgLower, "adiciona") && strings.Contains(msgLower, "git")) {
+		return "add"
+	}
+
+	if strings.Contains(msgLower, "commit") ||
+	   (strings.Contains(msgLower, "salva") && strings.Contains(msgLower, "git")) ||
+	   (strings.Contains(msgLower, "grava") && strings.Contains(msgLower, "git")) {
+		return "commit"
+	}
+
+	if strings.Contains(msgLower, "branch") ||
+	   strings.Contains(msgLower, "ramo") ||
+	   strings.Contains(msgLower, "ramificação") {
+		return "branch"
+	}
+
+	// Default: status (operação mais segura e informativa)
+	return "status"
 }
 
 // handleWebSearch processa pesquisa web
