@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -272,10 +273,16 @@ Regras:
 	// Verificar se usuário mencionou integração e sugerir
 	integrationHint := generateIntegrationHint(userMessage, filePath)
 
+	// Verificar se arquivo foi criado na raiz e sugerir melhor localização
+	locationHint := generateLocationHint(filePath, a.workDir)
+
 	// Formatar resposta
 	response := fmt.Sprintf("✓ %s", toolResult.Message)
 	if integrationHint != "" {
 		response += "\n\n" + integrationHint
+	}
+	if locationHint != "" {
+		response += "\n\n" + locationHint
 	}
 
 	return response, nil
@@ -1568,6 +1575,168 @@ func extractMultipleFiles(filePath string) []string {
 
 	// Caso padrão: retornar como arquivo único
 	return []string{filePath}
+}
+
+// generateLocationHint sugere melhor localização se arquivo foi criado na raiz
+func generateLocationHint(filePath, workDir string) string {
+	// Ignorar se não for arquivo na raiz (já tem caminho)
+	baseName := filepath.Base(filePath)
+	if filePath != baseName {
+		// Arquivo já tem caminho (ex: src/main.go)
+		return ""
+	}
+
+	// Detectar tipo de projeto
+	projectType := detectProjectType(workDir)
+	if projectType == "" {
+		// Sem estrutura detectável
+		return ""
+	}
+
+	// Sugerir localização baseada no tipo de arquivo e projeto
+	suggestions := suggestFileLocation(baseName, projectType, workDir)
+	if len(suggestions) == 0 {
+		return ""
+	}
+
+	hint := "💡 Dica de organização: Este arquivo poderia estar melhor em:\n"
+	for _, suggestion := range suggestions {
+		hint += fmt.Sprintf("   📁 %s\n", suggestion)
+	}
+	hint += "\nConsidere mover o arquivo para manter o projeto organizado."
+
+	return hint
+}
+
+// detectProjectType detecta tipo de projeto examinando arquivos marcadores
+func detectProjectType(workDir string) string {
+	// Go project
+	if fileExists(filepath.Join(workDir, "go.mod")) {
+		return "go"
+	}
+
+	// Node.js project
+	if fileExists(filepath.Join(workDir, "package.json")) {
+		return "nodejs"
+	}
+
+	// Python project
+	if fileExists(filepath.Join(workDir, "requirements.txt")) ||
+	   fileExists(filepath.Join(workDir, "setup.py")) ||
+	   fileExists(filepath.Join(workDir, "pyproject.toml")) {
+		return "python"
+	}
+
+	// Rust project
+	if fileExists(filepath.Join(workDir, "Cargo.toml")) {
+		return "rust"
+	}
+
+	// Java/Maven project
+	if fileExists(filepath.Join(workDir, "pom.xml")) {
+		return "java-maven"
+	}
+
+	// Java/Gradle project
+	if fileExists(filepath.Join(workDir, "build.gradle")) ||
+	   fileExists(filepath.Join(workDir, "build.gradle.kts")) {
+		return "java-gradle"
+	}
+
+	return ""
+}
+
+// fileExists verifica se arquivo existe
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// suggestFileLocation sugere localizações apropriadas baseado no tipo de projeto
+func suggestFileLocation(filename, projectType, workDir string) []string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	var suggestions []string
+
+	switch projectType {
+	case "go":
+		// Estrutura Go padrão
+		if strings.HasSuffix(filename, "_test.go") {
+			// Arquivos de teste vão no mesmo diretório do código
+			suggestions = append(suggestions, "internal/"+strings.TrimSuffix(filename, "_test.go")+"/")
+		} else if strings.Contains(filename, "main.go") {
+			// Executáveis vão em cmd/
+			if dirExists(filepath.Join(workDir, "cmd")) {
+				suggestions = append(suggestions, "cmd/<nome-do-app>/main.go")
+			}
+		} else {
+			// Código interno vai em internal/
+			if dirExists(filepath.Join(workDir, "internal")) {
+				suggestions = append(suggestions, "internal/<package>/"+filename)
+			}
+			// Código público vai em pkg/
+			if dirExists(filepath.Join(workDir, "pkg")) {
+				suggestions = append(suggestions, "pkg/<package>/"+filename)
+			}
+		}
+
+	case "nodejs":
+		// Estrutura Node.js comum
+		if ext == ".js" || ext == ".ts" || ext == ".jsx" || ext == ".tsx" {
+			if dirExists(filepath.Join(workDir, "src")) {
+				suggestions = append(suggestions, "src/"+filename)
+			}
+			if strings.Contains(filename, "test") || strings.Contains(filename, "spec") {
+				suggestions = append(suggestions, "test/"+filename)
+			}
+		} else if ext == ".json" && filename != "package.json" {
+			suggestions = append(suggestions, "config/"+filename)
+		}
+
+	case "python":
+		// Estrutura Python comum
+		if ext == ".py" {
+			if strings.Contains(filename, "test_") {
+				suggestions = append(suggestions, "tests/"+filename)
+			} else {
+				if dirExists(filepath.Join(workDir, "src")) {
+					suggestions = append(suggestions, "src/"+filename)
+				}
+				// Nome do package baseado no diretório
+				pkgName := filepath.Base(workDir)
+				suggestions = append(suggestions, pkgName+"/"+filename)
+			}
+		}
+
+	case "rust":
+		// Estrutura Rust padrão
+		if ext == ".rs" {
+			if filename == "main.rs" {
+				suggestions = append(suggestions, "src/main.rs")
+			} else if filename == "lib.rs" {
+				suggestions = append(suggestions, "src/lib.rs")
+			} else {
+				suggestions = append(suggestions, "src/"+filename)
+			}
+		}
+
+	case "java-maven", "java-gradle":
+		// Estrutura Java padrão
+		if ext == ".java" {
+			if strings.Contains(filename, "Test") {
+				suggestions = append(suggestions, "src/test/java/<package>/"+filename)
+			} else {
+				suggestions = append(suggestions, "src/main/java/<package>/"+filename)
+			}
+		}
+	}
+
+	return suggestions
+}
+
+// dirExists verifica se diretório existe
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 // handleMultiFileRead processa leitura de múltiplos arquivos
