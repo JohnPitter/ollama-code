@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/johnpitter/ollama-code/internal/intent"
@@ -260,8 +261,16 @@ Regras:
 	// Registrar arquivo como recentemente modificado
 	a.AddRecentFile(filePath)
 
+	// Verificar se usuário mencionou integração e sugerir
+	integrationHint := generateIntegrationHint(userMessage, filePath)
+
 	// Formatar resposta
-	return fmt.Sprintf("✓ %s", toolResult.Message), nil
+	response := fmt.Sprintf("✓ %s", toolResult.Message)
+	if integrationHint != "" {
+		response += "\n\n" + integrationHint
+	}
+
+	return response, nil
 }
 
 // handleExecuteCommand processa execução de comando
@@ -1402,6 +1411,95 @@ func detectMultiFileRequest(message string) bool {
 	}
 
 	return false
+}
+
+// generateIntegrationHint gera sugestão de integração se usuário mencionou conectar/integrar arquivos
+func generateIntegrationHint(userMessage, createdFile string) string {
+	msgLower := strings.ToLower(userMessage)
+
+	// Keywords de integração
+	integrationKeywords := []string{
+		"conecta no", "conecta ao", "conecta em", "conecta com",
+		"adiciona no", "adiciona ao", "adiciona em",
+		"integra no", "integra ao", "integra em", "integra com",
+		"inclui no", "inclui em",
+		"linka no", "linka ao", "linka em",
+		"importa no", "importa em",
+	}
+
+	// Verificar se mensagem contém keyword de integração
+	hasIntegration := false
+	for _, keyword := range integrationKeywords {
+		if strings.Contains(msgLower, keyword) {
+			hasIntegration = true
+			break
+		}
+	}
+
+	if !hasIntegration {
+		return ""
+	}
+
+	// Tentar extrair arquivo de destino
+	targetFile := extractTargetFile(msgLower, integrationKeywords)
+	if targetFile == "" {
+		return ""
+	}
+
+	// Gerar sugestão baseada na extensão do arquivo criado
+	ext := strings.ToLower(filepath.Ext(createdFile))
+	baseName := filepath.Base(createdFile)
+
+	switch ext {
+	case ".js":
+		return fmt.Sprintf("💡 Dica: Para usar %s no %s, adicione:\n   <script src=\"%s\"></script>", baseName, targetFile, baseName)
+	case ".css":
+		return fmt.Sprintf("💡 Dica: Para usar %s no %s, adicione:\n   <link rel=\"stylesheet\" href=\"%s\">", baseName, targetFile, baseName)
+	case ".jsx", ".tsx":
+		return fmt.Sprintf("💡 Dica: Para importar %s no %s, adicione:\n   import Component from './%s';", baseName, targetFile, baseName)
+	case ".ts":
+		importName := strings.TrimSuffix(baseName, ext)
+		return fmt.Sprintf("💡 Dica: Para importar %s no %s, adicione:\n   import { %s } from './%s';", baseName, targetFile, importName, importName)
+	case ".go":
+		return fmt.Sprintf("💡 Dica: Para usar %s no %s, certifique-se de que ambos estão no mesmo package ou importe adequadamente.", baseName, targetFile)
+	case ".py":
+		importName := strings.TrimSuffix(baseName, ext)
+		return fmt.Sprintf("💡 Dica: Para importar %s no %s, adicione:\n   from %s import *", baseName, targetFile, importName)
+	}
+
+	return ""
+}
+
+// extractTargetFile extrai nome do arquivo de destino da mensagem
+func extractTargetFile(msgLower string, integrationKeywords []string) string {
+	for _, keyword := range integrationKeywords {
+		if strings.Contains(msgLower, keyword) {
+			parts := strings.Split(msgLower, keyword)
+			if len(parts) > 1 {
+				afterKeyword := strings.TrimSpace(parts[1])
+				words := strings.Fields(afterKeyword)
+
+				// Procurar por nome de arquivo (contém extensão comum)
+				for _, word := range words {
+					word = strings.Trim(word, ".,;:\"'")
+					if strings.Contains(word, ".html") ||
+						strings.Contains(word, ".htm") ||
+						strings.Contains(word, ".js") ||
+						strings.Contains(word, ".jsx") ||
+						strings.Contains(word, ".tsx") ||
+						strings.Contains(word, ".ts") ||
+						strings.Contains(word, ".css") ||
+						strings.Contains(word, ".go") ||
+						strings.Contains(word, ".py") ||
+						strings.Contains(word, ".java") ||
+						strings.Contains(word, ".php") {
+						return word
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // handleMultiFileWrite processa criação de múltiplos arquivos
