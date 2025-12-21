@@ -20,6 +20,14 @@ func (a *Agent) handleReadFile(ctx context.Context, result *intent.DetectionResu
 		return "Erro: caminho do arquivo não especificado", nil
 	}
 
+	// Detectar se há múltiplos arquivos mencionados
+	fileList := extractMultipleFiles(filePath)
+	if len(fileList) > 1 {
+		// Processar múltiplos arquivos
+		return a.handleMultiFileRead(ctx, fileList, userMessage)
+	}
+
+	// Processar arquivo único (comportamento original)
 	// Executar ferramenta
 	toolResult, err := a.toolRegistry.Execute(ctx, "file_reader", map[string]interface{}{
 		"file_path": filePath,
@@ -1500,6 +1508,160 @@ func extractTargetFile(msgLower string, integrationKeywords []string) string {
 		}
 	}
 	return ""
+}
+
+// extractMultipleFiles extrai lista de arquivos de uma string
+func extractMultipleFiles(filePath string) []string {
+	// Limpar espaços
+	filePath = strings.TrimSpace(filePath)
+
+	var files []string
+
+	// Estratégia 1: Separar por vírgulas
+	if strings.Contains(filePath, ",") {
+		parts := strings.Split(filePath, ",")
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				files = append(files, part)
+			}
+		}
+		return files
+	}
+
+	// Estratégia 2: Separar por " e " ou " and "
+	if strings.Contains(filePath, " e ") || strings.Contains(filePath, " and ") {
+		// Substituir " e " por vírgula
+		filePath = strings.ReplaceAll(filePath, " e ", ",")
+		filePath = strings.ReplaceAll(filePath, " and ", ",")
+		parts := strings.Split(filePath, ",")
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				files = append(files, part)
+			}
+		}
+		return files
+	}
+
+	// Estratégia 3: Separar por espaços (apenas se houver múltiplas extensões de arquivo)
+	if strings.Contains(filePath, " ") {
+		parts := strings.Fields(filePath)
+		// Contar quantas partes parecem ser arquivos (têm extensão)
+		fileCount := 0
+		for _, part := range parts {
+			if strings.Contains(part, ".") && !strings.HasPrefix(part, ".") {
+				fileCount++
+			}
+		}
+
+		// Se temos múltiplos arquivos, retornar lista
+		if fileCount > 1 {
+			for _, part := range parts {
+				if strings.Contains(part, ".") && !strings.HasPrefix(part, ".") {
+					files = append(files, part)
+				}
+			}
+			return files
+		}
+	}
+
+	// Caso padrão: retornar como arquivo único
+	return []string{filePath}
+}
+
+// handleMultiFileRead processa leitura de múltiplos arquivos
+func (a *Agent) handleMultiFileRead(ctx context.Context, fileList []string, userMessage string) (string, error) {
+	a.colorBlue.Printf("📚 Lendo %d arquivos...\n", len(fileList))
+
+	var results []string
+	var failedFiles []string
+
+	for _, filePath := range fileList {
+		filePath = strings.TrimSpace(filePath)
+		if filePath == "" {
+			continue
+		}
+
+		a.colorBlue.Printf("   📄 %s\n", filePath)
+
+		// Ler arquivo usando o tool
+		toolResult, err := a.toolRegistry.Execute(ctx, "file_reader", map[string]interface{}{
+			"file_path": filePath,
+		})
+
+		if err != nil || !toolResult.Success {
+			a.colorYellow.Printf("   ⚠️  Erro ao ler %s: %s\n", filePath, toolResult.Error)
+			failedFiles = append(failedFiles, filePath)
+			continue
+		}
+
+		// Extrair conteúdo
+		fileType, _ := toolResult.Data["type"].(string)
+		if fileType == "text" {
+			content, ok := toolResult.Data["content"].(string)
+			if ok {
+				// Truncar se muito longo
+				if len(content) > 1000 {
+					content = content[:1000] + "\n... (truncado)"
+				}
+				results = append(results, fmt.Sprintf("=== %s ===\n%s\n", filePath, content))
+			}
+		}
+	}
+
+	if len(results) == 0 {
+		return fmt.Sprintf("❌ Nenhum arquivo foi lido com sucesso.\n\nArquivos com falha: %s", strings.Join(failedFiles, ", ")), nil
+	}
+
+	// Construir resposta
+	response := fmt.Sprintf("✓ Lidos %d de %d arquivos:\n\n", len(results), len(fileList))
+	response += strings.Join(results, "\n")
+
+	if len(failedFiles) > 0 {
+		response += fmt.Sprintf("\n\n⚠️  %d arquivo(s) com falha: %s", len(failedFiles), strings.Join(failedFiles, ", "))
+	}
+
+	// Detectar se usuário quer análise/comparação
+	msgLower := strings.ToLower(userMessage)
+	needsAnalysis := strings.Contains(msgLower, "relação") ||
+		strings.Contains(msgLower, "compara") ||
+		strings.Contains(msgLower, "diferença") ||
+		strings.Contains(msgLower, "analisa") ||
+		strings.Contains(msgLower, "explica") ||
+		strings.Contains(msgLower, "me diz")
+
+	if needsAnalysis && len(results) > 0 {
+		a.colorBlue.Print("\n🔍 Analisando arquivos")
+
+		analysisPrompt := fmt.Sprintf(`Você é um assistente de programação expert. O usuário pediu:
+
+"%s"
+
+Conteúdo dos arquivos:
+%s
+
+Sua tarefa: Responder à pergunta do usuário de forma clara e objetiva sobre esses arquivos.
+
+Responda em português de forma direta e técnica.`, userMessage, response)
+
+		dotCount := 0
+		llmResponse, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
+			{Role: "user", Content: analysisPrompt},
+		}, &llm.CompletionOptions{Temperature: 0.3, MaxTokens: 2000}, func(chunk string) {
+			if dotCount < 30 {
+				fmt.Print(".")
+				dotCount++
+			}
+		})
+		fmt.Println()
+
+		if err == nil {
+			return llmResponse, nil
+		}
+	}
+
+	return response, nil
 }
 
 // handleMultiFileWrite processa criação de múltiplos arquivos
