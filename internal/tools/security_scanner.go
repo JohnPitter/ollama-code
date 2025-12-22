@@ -303,7 +303,6 @@ func detectProjectType(workDir string) string {
 }
 
 // Schema retorna schema JSON da tool
-// RequiresConfirmation indica se requer confirmaçãofunc (.*) RequiresConfirmation() bool {	return false}
 func (s *SecurityScanner) Schema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

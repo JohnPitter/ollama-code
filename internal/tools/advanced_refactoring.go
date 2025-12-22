@@ -306,7 +306,6 @@ func isCodeFile(ext string) bool {
 }
 
 // Schema retorna schema JSON da tool
-// RequiresConfirmation indica se requer confirmaçãofunc (.*) RequiresConfirmation() bool {	return false}
 func (a *AdvancedRefactoring) Schema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

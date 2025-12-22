@@ -371,7 +371,6 @@ func (b *BackgroundTaskManager) updateTaskError(taskID string, errMsg string) {
 }
 
 // Schema retorna schema JSON da tool
-// RequiresConfirmation indica se requer confirmaçãofunc (.*) RequiresConfirmation() bool {	return false}
 func (b *BackgroundTaskManager) Schema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

@@ -321,7 +321,6 @@ func (p *PerformanceProfiler) detectProjectType() string {
 }
 
 // Schema retorna schema JSON da tool
-// RequiresConfirmation indica se requer confirmaçãofunc (.*) RequiresConfirmation() bool {	return false}
 func (p *PerformanceProfiler) Schema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

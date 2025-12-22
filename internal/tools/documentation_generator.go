@@ -239,7 +239,6 @@ func (d *DocumentationGenerator) generateAPIDoc() Result {
 }
 
 // Schema retorna schema JSON da tool
-// RequiresConfirmation indica se requer confirmaçãofunc (.*) RequiresConfirmation() bool {	return false}
 func (d *DocumentationGenerator) Schema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
