@@ -1404,6 +1404,7 @@ Retorne o código COMPLETO corrigido (não apenas a parte modificada).`, filePat
 func detectMultiFileRequest(message string) bool {
 	msgLower := strings.ToLower(message)
 
+	// Keywords explícitas de multi-file
 	multiFileKeywords := []string{
 		"separados", "separadas",
 		"múltiplos arquivos", "multiplos arquivos",
@@ -1423,6 +1424,40 @@ func detectMultiFileRequest(message string) bool {
 		if strings.Contains(msgLower, keyword) {
 			return true
 		}
+	}
+
+	// Padrão: "arquivos" (plural) + " e "
+	if strings.Contains(msgLower, "arquivos") && strings.Contains(msgLower, " e ") {
+		return true
+	}
+
+	// Padrão: "files" (plural) + " and "
+	if strings.Contains(msgLower, "files") && strings.Contains(msgLower, " and ") {
+		return true
+	}
+
+	// Padrão: número + "arquivos" (ex: "3 arquivos", "dois arquivos")
+	numberKeywords := []string{"2 arquivos", "3 arquivos", "4 arquivos", "5 arquivos",
+		"dois arquivos", "três arquivos", "tres arquivos", "quatro arquivos", "cinco arquivos"}
+	for _, keyword := range numberKeywords {
+		if strings.Contains(msgLower, keyword) {
+			return true
+		}
+	}
+
+	// Padrão: contar extensões de arquivo distintas (se >= 2, é multi-file)
+	extensions := make(map[string]bool)
+	words := strings.Fields(message)
+	for _, word := range words {
+		if strings.Contains(word, ".") {
+			ext := strings.ToLower(filepath.Ext(word))
+			if ext != "" && len(ext) <= 10 { // extensões válidas têm no máximo ~10 chars
+				extensions[ext] = true
+			}
+		}
+	}
+	if len(extensions) >= 2 {
+		return true
 	}
 
 	return false
