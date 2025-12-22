@@ -166,13 +166,15 @@ Retorne SOMENTE o JSON abaixo:
   "mode": "create"
 }
 
-Regras:
+Regras CRÍTICAS:
 - Primeira linha deve ser { (abre chave JSON)
 - Última linha deve ser } (fecha chave JSON)
 - file_path deve ser nome de arquivo válido (ex: index.html, style.css, main.py)
-- Gere código funcional e completo no campo content
+- O campo "content" deve conter CÓDIGO PURO como STRING, NÃO como objeto JSON
 - Use boas práticas de programação
-- NÃO adicione texto explicativo fora do JSON`, userMessage)
+- NÃO adicione texto explicativo fora do JSON
+- NUNCA use estruturas JSON aninhadas dentro do campo content
+- O content deve ser uma string simples com o código`, userMessage)
 
 		// Usar streaming com indicador de progresso
 		dotCount := 0
@@ -1313,6 +1315,50 @@ func cleanCodeContent(content string, filename string) string {
 
 	content = strings.TrimSpace(content)
 
+	// 1.5. Detectar nested JSON (LLM às vezes gera código como JSON nested)
+	// Exemplo: { "def fibonacci(n):": { "if n <= 0": { ... } } }
+	// IMPORTANTE: Só fazer isso se NÃO for arquivo .json
+	if !isJSON && strings.HasPrefix(content, "{") && strings.Contains(content, `":`) {
+		// Verificar se parece nested JSON (tem aspas em volta de código)
+		lines := strings.Split(content, "\n")
+		if len(lines) >= 2 {
+			// Se as primeiras linhas tem padrão "código": {
+			// então é nested JSON, não código válido
+			secondLine := strings.TrimSpace(lines[1])
+			if strings.Contains(secondLine, `":`) && strings.Contains(secondLine, `{`) {
+				// É nested JSON! Tentar extrair as keys como código
+				var codeLines []string
+				for _, line := range lines {
+					trimmed := strings.TrimSpace(line)
+					// Pular linhas que são só { ou }
+					if trimmed == "{" || trimmed == "}" {
+						continue
+					}
+					// Extrair código das keys: "código": { → código
+					if strings.Contains(trimmed, `":`) {
+						// Pegar tudo antes de ": {
+						idx := strings.Index(trimmed, `":`)
+						if idx != -1 {
+							code := trimmed[:idx]
+							// Remover aspas iniciais
+							code = strings.TrimPrefix(code, `"`)
+							code = strings.TrimSpace(code)
+							if code != "" {
+								codeLines = append(codeLines, code)
+							}
+						}
+					}
+				}
+				// Se conseguimos extrair código, usar
+				if len(codeLines) > 0 {
+					content = strings.Join(codeLines, "\n")
+				}
+			}
+		}
+	}
+
+	content = strings.TrimSpace(content)
+
 	// 2. Remover markdown code blocks (```language ... ```)
 	content = strings.TrimPrefix(content, "```")
 	content = strings.TrimSuffix(content, "```")
@@ -1341,21 +1387,35 @@ func cleanCodeContent(content string, filename string) string {
 	// IMPORTANTE: NÃO fazer isso para arquivos .json pois são estruturalmente válidos
 	if !isJSON && strings.HasPrefix(content, "{") && strings.HasSuffix(content, "}") {
 		// Verificar se não é código válido (struct, objeto, etc)
-		// Se segunda linha não é código, é provável que seja wrapper
+		// Detectar linguagem do arquivo para saber se { } são válidos
+		ext := strings.ToLower(filename)
+		isPythonFile := strings.HasSuffix(ext, ".py")
+
 		testLines := strings.Split(content, "\n")
-		if len(testLines) > 1 {
+		if len(testLines) > 2 {
+			firstLine := strings.TrimSpace(testLines[0])
 			secondLine := strings.TrimSpace(testLines[1])
-			// Se segunda linha não parece código (não tem keywords), é wrapper
-			if !strings.Contains(secondLine, "package") &&
-				!strings.Contains(secondLine, "import") &&
-				!strings.Contains(secondLine, "func") &&
-				!strings.Contains(secondLine, "class") &&
-				!strings.Contains(secondLine, "def") &&
-				!strings.Contains(secondLine, "const") &&
-				!strings.Contains(secondLine, "var") &&
-				!strings.Contains(secondLine, "let") {
-				// É wrapper, remover primeira e última linha
-				if len(testLines) > 2 {
+			lastLine := strings.TrimSpace(testLines[len(testLines)-1])
+
+			// Se primeira linha é só "{" e última termina com "}", é wrapper
+			// Última linha pode ser "}" ou '"}'  ou  '},' etc
+			isSimpleWrapper := firstLine == "{" && (lastLine == "}" || strings.HasSuffix(lastLine, "}"))
+
+			// Para Python: { } nunca são válidos no nível raiz, sempre remover
+			if isPythonFile && isSimpleWrapper {
+				content = strings.Join(testLines[1:len(testLines)-1], "\n")
+			} else if isSimpleWrapper {
+				// Para outras linguagens, verificar se segunda linha parece início de código
+				// Se segunda linha não tem keywords típicos, é wrapper
+				if !strings.Contains(secondLine, "package") &&
+					!strings.Contains(secondLine, "import") &&
+					!strings.Contains(secondLine, "func") &&
+					!strings.Contains(secondLine, "class") &&
+					!strings.Contains(secondLine, "const") &&
+					!strings.Contains(secondLine, "var") &&
+					!strings.Contains(secondLine, "let") &&
+					!strings.Contains(secondLine, "function") {
+					// É wrapper, remover primeira e última linha
 					content = strings.Join(testLines[1:len(testLines)-1], "\n")
 				}
 			}
@@ -1626,13 +1686,32 @@ func detectMultiFileRequest(message string) bool {
 	}
 
 	// Padrão: contar extensões de arquivo distintas (se >= 2, é multi-file)
+	// IMPORTANTE: Filtrar falsos positivos como "Node.js", "Vue.js", etc
 	extensions := make(map[string]bool)
 	words := strings.Fields(message)
+	knownExtensions := map[string]bool{
+		".html": true, ".css": true, ".js": true, ".ts": true,
+		".go": true, ".py": true, ".java": true, ".c": true, ".cpp": true,
+		".json": true, ".yaml": true, ".yml": true, ".xml": true,
+		".jsx": true, ".tsx": true, ".vue": true, ".php": true,
+		".rb": true, ".sh": true, ".bat": true, ".sql": true,
+	}
+
 	for _, word := range words {
 		if strings.Contains(word, ".") {
 			ext := strings.ToLower(filepath.Ext(word))
-			if ext != "" && len(ext) <= 10 { // extensões válidas têm no máximo ~10 chars
-				extensions[ext] = true
+			// Apenas contar se é uma extensão conhecida E o word parece um arquivo
+			// (palavra não capitalizada no meio como "Node.js")
+			if ext != "" && knownExtensions[ext] {
+				// Verificar se não é tecnologia (Node.js, Vue.js, React.js)
+				wordLower := strings.ToLower(word)
+				isTechnology := wordLower == "node.js" || wordLower == "vue.js" ||
+					wordLower == "react.js" || wordLower == "next.js" ||
+					wordLower == "express.js" || strings.HasPrefix(wordLower, "node.js")
+
+				if !isTechnology {
+					extensions[ext] = true
+				}
 			}
 		}
 	}
