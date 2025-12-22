@@ -117,6 +117,14 @@ func (a *Agent) handleWriteFile(ctx context.Context, result *intent.DetectionRes
 	content, _ := result.Parameters["content"].(string)
 	mode, _ := result.Parameters["mode"].(string)
 
+	// Detectar se é uma operação de análise/review (leitura, não modificação)
+	isAnalysis, analysisFile := detectAnalysisRequest(userMessage)
+	if isAnalysis && analysisFile != "" {
+		// Usuário quer analisar/revisar arquivo (read-only operation)
+		// Redirecionar para handleReadFile com contexto de análise
+		return a.handleReadFileWithAnalysis(ctx, analysisFile, userMessage)
+	}
+
 	// Detectar se é uma edição de arquivo existente
 	isEdit, editFilePath := detectEditRequest(userMessage)
 	if isEdit && editFilePath != "" {
@@ -960,6 +968,13 @@ func detectEditRequest(message string) (bool, string) {
 		"arruma o",
 		"resolve",
 		"resolve o",
+		"refatora",
+		"refatora o",
+		"refatore",
+		"refatore o",
+		"refatoração",
+		"refatoração do",
+		"refactor",
 		"fix",
 	}
 
@@ -1009,6 +1024,154 @@ func detectEditRequest(message string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+// detectAnalysisRequest detecta se usuário quer analisar/revisar código (operação read-only)
+func detectAnalysisRequest(message string) (bool, string) {
+	msgLower := strings.ToLower(message)
+
+	// Keywords que indicam análise/review (NÃO modificação)
+	analysisKeywords := []string{
+		"analisa",
+		"analisa o",
+		"analise",
+		"analise o",
+		"análise",
+		"análise do",
+		"revisa",
+		"revisa o",
+		"revise",
+		"revise o",
+		"revisão",
+		"revisão do",
+		"review",
+		"review do",
+		"faz review",
+		"faz review do",
+		"explica",
+		"explica o",
+		"explique",
+		"explique o",
+		"me explica",
+		"me diz",
+		"me fala",
+		"o que faz",
+		"como funciona",
+		"entenda",
+		"entenda o",
+	}
+
+	// Verificar se mensagem contém keyword de análise
+	isAnalysis := false
+	for _, keyword := range analysisKeywords {
+		if strings.Contains(msgLower, keyword) {
+			isAnalysis = true
+			break
+		}
+	}
+
+	if !isAnalysis {
+		return false, ""
+	}
+
+	// Tentar extrair nome do arquivo
+	words := strings.Fields(message)
+	var foundFile string
+
+	for i, word := range words {
+		// Limpar pontuação
+		cleanWord := strings.Trim(word, ".,;:!?\"'")
+
+		// Se encontrou "arquivo" ou "código" ou "função", próxima palavra pode ser o nome
+		if strings.ToLower(word) == "arquivo" || strings.ToLower(word) == "código" ||
+		   strings.ToLower(word) == "funcao" || strings.ToLower(word) == "função" ||
+		   strings.ToLower(word) == "no" || strings.ToLower(word) == "em" || strings.ToLower(word) == "do" {
+			if i+1 < len(words) {
+				potentialFile := strings.Trim(words[i+1], ".,;:!?\"'")
+				if isValidFilename(potentialFile) {
+					foundFile = potentialFile
+					break
+				}
+			}
+		}
+
+		// Ou se a palavra parece nome de arquivo
+		if isValidFilename(cleanWord) {
+			foundFile = cleanWord
+			break
+		}
+	}
+
+	// Só retorna true se encontrou TANTO keyword de análise QUANTO nome de arquivo
+	if isAnalysis && foundFile != "" {
+		return true, foundFile
+	}
+
+	return false, ""
+}
+
+// handleReadFileWithAnalysis lê arquivo e faz análise/review usando LLM
+func (a *Agent) handleReadFileWithAnalysis(ctx context.Context, filePath, userMessage string) (string, error) {
+	a.colorBlue.Printf("🔍 Analisando arquivo: %s\n", filePath)
+
+	// 1. Ler arquivo
+	toolResult, err := a.toolRegistry.Execute(ctx, "file_reader", map[string]interface{}{
+		"file_path": filePath,
+	})
+
+	if err != nil || !toolResult.Success {
+		return fmt.Sprintf("❌ Erro ao ler arquivo: %s", toolResult.Error), nil
+	}
+
+	fileType, _ := toolResult.Data["type"].(string)
+	if fileType != "text" {
+		return "❌ Arquivo não é texto, não pode ser analisado", nil
+	}
+
+	content, ok := toolResult.Data["content"].(string)
+	if !ok || content == "" {
+		return "❌ Arquivo vazio ou sem conteúdo", nil
+	}
+
+	// 2. Usar LLM para análise
+	a.colorBlue.Print("💭 Analisando código")
+
+	analysisPrompt := fmt.Sprintf(`Você é um expert em revisão de código. O usuário pediu:
+
+"%s"
+
+Arquivo: %s
+Conteúdo:
+%s
+
+Sua tarefa: Analisar o código e responder à pergunta do usuário de forma clara, objetiva e técnica.
+
+Se for uma análise geral, forneça:
+- Resumo do que o código faz
+- Pontos positivos
+- Sugestões de melhoria (se houver)
+- Possíveis bugs ou problemas
+
+Se for uma pergunta específica, responda diretamente.
+
+Responda em português de forma profissional.`, userMessage, filePath, content)
+
+	dotCount := 0
+	llmResponse, err := a.llmClient.CompleteStreaming(ctx, []llm.Message{
+		{Role: "user", Content: analysisPrompt},
+	}, &llm.CompletionOptions{Temperature: 0.3, MaxTokens: 2000}, func(chunk string) {
+		if dotCount < 30 {
+			fmt.Print(".")
+			dotCount++
+		}
+	})
+	fmt.Println()
+
+	if err != nil {
+		return "Erro ao gerar análise", err
+	}
+
+	return llmResponse, nil
 }
 
 // handleFileEdit lida com edição de arquivo existente fazendo merge inteligente
@@ -1125,7 +1288,8 @@ func cleanCodeContent(content string, filename string) string {
 		strings.HasSuffix(strings.ToLower(filename), ".jsonc")
 
 	// 1. Remover JSON wrapper se presente: {"content": "código"}
-	if strings.HasPrefix(content, "{") && strings.Contains(content, `"content":`) {
+	// IMPORTANTE: NÃO fazer isso para arquivos .json pois são válidos
+	if !isJSON && strings.HasPrefix(content, "{") && strings.Contains(content, `"content":`) {
 		// Tentar extrair content do JSON
 		startIdx := strings.Index(content, `"content":`)
 		if startIdx != -1 {
