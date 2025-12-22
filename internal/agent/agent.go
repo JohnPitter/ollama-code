@@ -130,6 +130,7 @@ func NewAgent(cfg Config) (*Agent, error) {
 	toolRegistry.Register(tools.NewCodeSearcher(cfg.WorkDir))
 	toolRegistry.Register(tools.NewProjectAnalyzer(cfg.WorkDir))
 	toolRegistry.Register(tools.NewGitOperations(cfg.WorkDir))
+// Registrar ferramentas avançadas do QA Plan	toolRegistry.Register(tools.NewDependencyManager(cfg.WorkDir))	toolRegistry.Register(tools.NewDocumentationGenerator(cfg.WorkDir))	toolRegistry.Register(tools.NewSecurityScanner(cfg.WorkDir))	toolRegistry.Register(tools.NewAdvancedRefactoring(cfg.WorkDir))	toolRegistry.Register(tools.NewTestRunner(cfg.WorkDir))	toolRegistry.Register(tools.NewBackgroundTaskManager(cfg.WorkDir))	toolRegistry.Register(tools.NewPerformanceProfiler(cfg.WorkDir))
 
 	// Criar registry de skills
 	skillRegistry := skills.NewRegistry()
