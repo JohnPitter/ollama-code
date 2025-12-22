@@ -1404,6 +1404,22 @@ Retorne o código COMPLETO corrigido (não apenas a parte modificada).`, filePat
 func detectMultiFileRequest(message string) bool {
 	msgLower := strings.ToLower(message)
 
+	// Se mensagem contém keywords de integração, NÃO é multi-file
+	// (usuário quer criar um arquivo e conectar em outro existente)
+	integrationKeywords := []string{
+		"conecta no", "conecta ao", "conecta em", "conecta com",
+		"adiciona no", "adiciona ao", "adiciona em",
+		"integra no", "integra ao", "integra em", "integra com",
+		"inclui no", "inclui em",
+		"linka no", "linka ao", "linka em",
+		"importa no", "importa em",
+	}
+	for _, keyword := range integrationKeywords {
+		if strings.Contains(msgLower, keyword) {
+			return false
+		}
+	}
+
 	// Keywords explícitas de multi-file
 	multiFileKeywords := []string{
 		"separados", "separadas",
