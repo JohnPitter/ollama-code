@@ -63,6 +63,8 @@ func (m *MockSkillRegistry) FindSkill(ctx context.Context, message string) (inte
 type MockConfirmationManager struct {
 	ConfirmFunc            func(message string) (bool, error)
 	ConfirmWithPreviewFunc func(message, preview string) (bool, error)
+	AskQuestionFunc        func(question interface{}) (interface{}, error)
+	AskQuestionsFunc       func(questionSet interface{}) (map[string]interface{}, error)
 }
 
 func (m *MockConfirmationManager) Confirm(message string) (bool, error) {
@@ -77,6 +79,20 @@ func (m *MockConfirmationManager) ConfirmWithPreview(message, preview string) (b
 		return m.ConfirmWithPreviewFunc(message, preview)
 	}
 	return true, nil
+}
+
+func (m *MockConfirmationManager) AskQuestion(question interface{}) (interface{}, error) {
+	if m.AskQuestionFunc != nil {
+		return m.AskQuestionFunc(question)
+	}
+	return nil, nil
+}
+
+func (m *MockConfirmationManager) AskQuestions(questionSet interface{}) (map[string]interface{}, error) {
+	if m.AskQuestionsFunc != nil {
+		return m.AskQuestionsFunc(questionSet)
+	}
+	return nil, nil
 }
 
 // MockSessionManager mock para SessionManager

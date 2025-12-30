@@ -57,6 +57,8 @@ type SkillRegistry interface {
 type ConfirmationManager interface {
 	Confirm(message string) (bool, error)
 	ConfirmWithPreview(message, preview string) (bool, error)
+	AskQuestion(question interface{}) (interface{}, error)
+	AskQuestions(questionSet interface{}) (map[string]interface{}, error)
 }
 
 type SessionManager interface {

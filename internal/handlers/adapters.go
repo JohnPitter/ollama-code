@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/johnpitter/ollama-code/internal/cache"
 	"github.com/johnpitter/ollama-code/internal/commands"
@@ -97,6 +98,36 @@ func (a *ConfirmationManagerAdapter) Confirm(message string) (bool, error) {
 
 func (a *ConfirmationManagerAdapter) ConfirmWithPreview(message, preview string) (bool, error) {
 	return a.manager.ConfirmWithPreview(message, preview)
+}
+
+func (a *ConfirmationManagerAdapter) AskQuestion(question interface{}) (interface{}, error) {
+	// Converter interface{} para confirmation.Question
+	q, ok := question.(confirmation.Question)
+	if !ok {
+		return nil, fmt.Errorf("invalid question type")
+	}
+	return a.manager.AskQuestion(q)
+}
+
+func (a *ConfirmationManagerAdapter) AskQuestions(questionSet interface{}) (map[string]interface{}, error) {
+	// Converter interface{} para confirmation.QuestionSet
+	qs, ok := questionSet.(confirmation.QuestionSet)
+	if !ok {
+		return nil, fmt.Errorf("invalid question set type")
+	}
+
+	answers, err := a.manager.AskQuestions(qs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Converter map[string]*Answer para map[string]interface{}
+	result := make(map[string]interface{})
+	for k, v := range answers {
+		result[k] = v
+	}
+
+	return result, nil
 }
 
 // SessionManagerAdapter adapta session.Manager para handlers.SessionManager

@@ -123,13 +123,14 @@ deps.TodoManager.Complete("write-file-1")
 **Prioridade:** 🟡 ALTA
 **Esforço:** 1 semana
 **Inspiração:** AskUserQuestion tool do Claude Code CLI
+**Status:** ✅ COMPLETO (30/12/2024)
 
 **Funcionalidades:**
-- [ ] Perguntas com múltiplas opções
-- [ ] Suporte a multiselect
-- [ ] Headers e descrições por opção
-- [ ] Validação de respostas
-- [ ] Fallback para input customizado
+- [x] Perguntas com múltiplas opções
+- [x] Suporte a multiselect
+- [x] Headers e descrições por opção
+- [x] Validação de respostas
+- [x] Fallback para input customizado
 
 **Arquivos a Modificar:**
 ```
