@@ -17,6 +17,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
 	"github.com/johnpitter/ollama-code/internal/statusline"
+	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
 )
@@ -33,6 +34,7 @@ type Config struct {
 	EnableCache          bool
 	EnableStatusLine     bool
 	EnableObservability  bool
+	EnableTodos          bool
 	CacheTTL             time.Duration
 	ObservabilityConfig  observability.LoggerConfig
 }
@@ -255,4 +257,20 @@ func ProvideObservability(cfg *Config) *observability.Observability {
 	}
 
 	return observability.New(loggerConfig)
+}
+
+// ProvideTodoManager fornece TODO manager
+func ProvideTodoManager(cfg *Config) *todos.Manager {
+	if !cfg.EnableTodos {
+		return nil
+	}
+
+	// Tentar usar file storage, fallback para memory storage
+	storage, err := todos.DefaultFileStorage()
+	if err != nil {
+		fmt.Printf("⚠️  Aviso: Usando TODO storage em memória: %v\n", err)
+		return todos.NewManager()
+	}
+
+	return todos.NewManagerWithStorage(storage)
 }

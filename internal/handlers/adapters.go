@@ -11,6 +11,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/modes"
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
+	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
 )
@@ -135,6 +136,98 @@ func (a *CacheManagerAdapter) Set(key string, value interface{}) {
 	if a.manager != nil {
 		a.manager.Set(key, value)
 	}
+}
+
+// TodoManagerAdapter adapta todos.Manager para handlers.TodoManager
+type TodoManagerAdapter struct {
+	manager *todos.Manager
+}
+
+func NewTodoManagerAdapter(manager *todos.Manager) *TodoManagerAdapter {
+	return &TodoManagerAdapter{manager: manager}
+}
+
+func (a *TodoManagerAdapter) Add(content, activeForm string) (string, error) {
+	if a.manager == nil {
+		return "", nil // TODO manager é opcional
+	}
+	return a.manager.Add(content, activeForm)
+}
+
+func (a *TodoManagerAdapter) Update(id string, status interface{}) error {
+	if a.manager == nil {
+		return nil
+	}
+	todoStatus, ok := status.(todos.TodoStatus)
+	if !ok {
+		return nil
+	}
+	return a.manager.Update(id, todoStatus)
+}
+
+func (a *TodoManagerAdapter) Complete(id string) error {
+	if a.manager == nil {
+		return nil
+	}
+	return a.manager.Complete(id)
+}
+
+func (a *TodoManagerAdapter) SetInProgress(id string) error {
+	if a.manager == nil {
+		return nil
+	}
+	return a.manager.SetInProgress(id)
+}
+
+func (a *TodoManagerAdapter) List() interface{} {
+	if a.manager == nil {
+		return nil
+	}
+	return a.manager.List()
+}
+
+func (a *TodoManagerAdapter) ListByStatus(status interface{}) interface{} {
+	if a.manager == nil {
+		return nil
+	}
+	todoStatus, ok := status.(todos.TodoStatus)
+	if !ok {
+		return nil
+	}
+	return a.manager.ListByStatus(todoStatus)
+}
+
+func (a *TodoManagerAdapter) Summary() map[interface{}]int {
+	if a.manager == nil {
+		return nil
+	}
+	summary := a.manager.Summary()
+	result := make(map[interface{}]int)
+	for k, v := range summary {
+		result[k] = v
+	}
+	return result
+}
+
+func (a *TodoManagerAdapter) Clear() error {
+	if a.manager == nil {
+		return nil
+	}
+	return a.manager.Clear()
+}
+
+func (a *TodoManagerAdapter) Delete(id string) error {
+	if a.manager == nil {
+		return nil
+	}
+	return a.manager.Delete(id)
+}
+
+func (a *TodoManagerAdapter) Count() int {
+	if a.manager == nil {
+		return 0
+	}
+	return a.manager.Count()
 }
 
 // LLMClientAdapter adapta llm.Client para handlers.LLMClient

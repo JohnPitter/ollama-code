@@ -21,6 +21,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
 	"github.com/johnpitter/ollama-code/internal/statusline"
+	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
 )
@@ -40,6 +41,7 @@ type Agent struct {
 	OllamaContext   *ollamamd.OllamaContext
 	HandlerRegistry *handlers.Registry
 	Observability   *observability.Observability
+	TodoManager     *todos.Manager
 	Mode            modes.OperationMode
 	WorkDir         string
 	History         []llm.Message
@@ -261,8 +263,8 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 	})
 	a.Mu.Unlock()
 
-	// Mostrar resposta (se não foi mostrada em streaming)
-	if detectionResult.Intent != intent.IntentQuestion && response != "" {
+	// Mostrar resposta
+	if response != "" {
 		a.ColorGreen.Println("\n🤖 Assistente:")
 		fmt.Println(response)
 		fmt.Println()
@@ -406,6 +408,7 @@ func (a *Agent) buildDependencies() *handlers.Dependencies {
 		ConfirmManager:  handlers.NewConfirmationManagerAdapter(a.ConfirmManager),
 		SessionManager:  handlers.NewSessionManagerAdapter(a.SessionManager),
 		CacheManager:    handlers.NewCacheManagerAdapter(a.Cache),
+		TodoManager:     handlers.NewTodoManagerAdapter(a.TodoManager),
 		LLMClient:       handlers.NewLLMClientAdapter(a.LLMClient),
 		WebSearch:       handlers.NewWebSearchClientAdapter(a.WebSearch),
 		IntentDetector:  handlers.NewIntentDetectorAdapter(a.IntentDetector),

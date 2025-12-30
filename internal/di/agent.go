@@ -18,6 +18,7 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 	sessionManager := ProvideSessionManager(cfg)
 	cacheManager := ProvideCacheManager(cfg)
 	statusLine := ProvideStatusLine(cfg)
+	todoManager := ProvideTodoManager(cfg)
 
 	// Ollama context
 	ollamaContext, err := ProvideOllamaContext(cfg)
@@ -71,6 +72,7 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 		StatusLine:      statusLine,
 		OllamaContext:   ollamaContext,
 		HandlerRegistry: handlerRegistry,
+		TodoManager:     todoManager,
 		Mode:            cfg.Mode,
 		WorkDir:         cfg.WorkDir,
 		History:         []llm.Message{},

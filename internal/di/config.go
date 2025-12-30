@@ -37,6 +37,7 @@ func NewConfigFromAgent(agentCfg agent.Config) *Config {
 		EnableSessions:   agentCfg.EnableSessions,
 		EnableCache:      agentCfg.EnableCache,
 		EnableStatusLine: agentCfg.EnableStatusLine,
+		EnableTodos:      true, // Default enabled
 		CacheTTL:         agentCfg.CacheTTL,
 	}
 }

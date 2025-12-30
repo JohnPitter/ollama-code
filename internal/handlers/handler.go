@@ -24,6 +24,7 @@ type Dependencies struct {
 	ConfirmManager  ConfirmationManager
 	SessionManager  SessionManager
 	CacheManager    CacheManager
+	TodoManager     TodoManager
 
 	// Clients
 	LLMClient      LLMClient
@@ -65,6 +66,19 @@ type SessionManager interface {
 type CacheManager interface {
 	Get(key string) (interface{}, bool)
 	Set(key string, value interface{})
+}
+
+type TodoManager interface {
+	Add(content, activeForm string) (string, error)
+	Update(id string, status interface{}) error
+	Complete(id string) error
+	SetInProgress(id string) error
+	List() interface{}
+	ListByStatus(status interface{}) interface{}
+	Summary() map[interface{}]int
+	Clear() error
+	Delete(id string) error
+	Count() int
 }
 
 type LLMClient interface {
