@@ -12,9 +12,11 @@ import (
 	"github.com/johnpitter/ollama-code/internal/cache"
 	"github.com/johnpitter/ollama-code/internal/commands"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
+	"github.com/johnpitter/ollama-code/internal/handlers"
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
+	"github.com/johnpitter/ollama-code/internal/observability"
 	"github.com/johnpitter/ollama-code/internal/ollamamd"
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
@@ -25,28 +27,30 @@ import (
 
 // Agent agente principal
 type Agent struct {
-	llmClient       *llm.Client
-	intentDetector  *intent.Detector
-	toolRegistry    *tools.Registry
-	commandRegistry *commands.Registry
-	skillRegistry   *skills.Registry
-	confirmManager  *confirmation.Manager
-	webSearch       *websearch.Orchestrator
-	sessionManager  *session.Manager
-	cache           *cache.Manager
-	statusLine      *statusline.StatusLine
-	ollamaContext   *ollamamd.OllamaContext
-	mode            modes.OperationMode
-	workDir         string
-	history         []llm.Message
-	recentFiles     []string // Arquivos criados/modificados recentemente
-	mu              sync.Mutex
+	LLMClient       *llm.Client
+	IntentDetector  *intent.Detector
+	ToolRegistry    *tools.Registry
+	CommandRegistry *commands.Registry
+	SkillRegistry   *skills.Registry
+	ConfirmManager  *confirmation.Manager
+	WebSearch       *websearch.Orchestrator
+	SessionManager  *session.Manager
+	Cache           *cache.Manager
+	StatusLine      *statusline.StatusLine
+	OllamaContext   *ollamamd.OllamaContext
+	HandlerRegistry *handlers.Registry
+	Observability   *observability.Observability
+	Mode            modes.OperationMode
+	WorkDir         string
+	History         []llm.Message
+	RecentFiles     []string // Arquivos criados/modificados recentemente
+	Mu              sync.Mutex
 
 	// Colors
-	colorGreen  *color.Color
-	colorBlue   *color.Color
-	colorYellow *color.Color
-	colorRed    *color.Color
+	ColorGreen  *color.Color
+	ColorBlue   *color.Color
+	ColorYellow *color.Color
+	ColorRed    *color.Color
 }
 
 // Config configuração do agente
@@ -130,7 +134,18 @@ func NewAgent(cfg Config) (*Agent, error) {
 	toolRegistry.Register(tools.NewCodeSearcher(cfg.WorkDir))
 	toolRegistry.Register(tools.NewProjectAnalyzer(cfg.WorkDir))
 	toolRegistry.Register(tools.NewGitOperations(cfg.WorkDir))
-// Registrar ferramentas avançadas do QA Plan	toolRegistry.Register(tools.NewDependencyManager(cfg.WorkDir))	toolRegistry.Register(tools.NewDocumentationGenerator(cfg.WorkDir))	toolRegistry.Register(tools.NewSecurityScanner(cfg.WorkDir))	toolRegistry.Register(tools.NewAdvancedRefactoring(cfg.WorkDir))	toolRegistry.Register(tools.NewTestRunner(cfg.WorkDir))	toolRegistry.Register(tools.NewBackgroundTaskManager(cfg.WorkDir))	toolRegistry.Register(tools.NewPerformanceProfiler(cfg.WorkDir))
+	// Registrar ferramentas avançadas do QA Plan
+	toolRegistry.Register(tools.NewDependencyManager(cfg.WorkDir))
+	toolRegistry.Register(tools.NewDocumentationGenerator(cfg.WorkDir))
+	toolRegistry.Register(tools.NewSecurityScanner(cfg.WorkDir))
+	toolRegistry.Register(tools.NewAdvancedRefactoring(cfg.WorkDir))
+	toolRegistry.Register(tools.NewTestRunner(cfg.WorkDir))
+	toolRegistry.Register(tools.NewBackgroundTaskManager(cfg.WorkDir))
+	toolRegistry.Register(tools.NewPerformanceProfiler(cfg.WorkDir))
+
+	// Registrar novas integrações
+	toolRegistry.Register(tools.NewGitHelper(cfg.WorkDir))
+	toolRegistry.Register(tools.NewCodeFormatter(cfg.WorkDir))
 
 	// Criar registry de skills
 	skillRegistry := skills.NewRegistry()
@@ -150,26 +165,42 @@ func NewAgent(cfg Config) (*Agent, error) {
 		fmt.Printf("📋 Carregados %d arquivo(s) OLLAMA.md\n", len(ollamaContext.Files))
 	}
 
+	// Criar HandlerRegistry
+	handlerRegistry := handlers.NewRegistry()
+
+	// Registrar handlers
+	handlerRegistry.Register(intent.IntentReadFile, handlers.NewFileReadHandler())
+	handlerRegistry.Register(intent.IntentWriteFile, handlers.NewFileWriteHandler())
+	handlerRegistry.Register(intent.IntentExecuteCommand, handlers.NewExecuteHandler())
+	handlerRegistry.Register(intent.IntentSearchCode, handlers.NewSearchHandler())
+	handlerRegistry.Register(intent.IntentAnalyzeProject, handlers.NewAnalyzeHandler())
+	handlerRegistry.Register(intent.IntentGitOperation, handlers.NewGitHandler())
+	handlerRegistry.Register(intent.IntentWebSearch, handlers.NewWebSearchHandler())
+
+	// Registrar default handler (Question)
+	handlerRegistry.RegisterDefault(handlers.NewQuestionHandler())
+
 	agent := &Agent{
-		llmClient:       llmClient,
-		intentDetector:  intentDetector,
-		toolRegistry:    toolRegistry,
-		commandRegistry: commands.NewRegistry(),
-		skillRegistry:   skillRegistry,
-		confirmManager:  confirmation.NewManager(),
-		webSearch:       websearch.NewOrchestrator(),
-		sessionManager:  sessionMgr,
-		cache:           cacheMgr,
-		statusLine:      statusLineMgr,
-		ollamaContext:   ollamaContext,
-		mode:            cfg.Mode,
-		workDir:         cfg.WorkDir,
-		history:         []llm.Message{},
-		recentFiles:     []string{},
-		colorGreen:      color.New(color.FgGreen, color.Bold),
-		colorBlue:       color.New(color.FgBlue, color.Bold),
-		colorYellow:     color.New(color.FgYellow),
-		colorRed:        color.New(color.FgRed),
+		LLMClient:       llmClient,
+		IntentDetector:  intentDetector,
+		ToolRegistry:    toolRegistry,
+		CommandRegistry: commands.NewRegistry(),
+		SkillRegistry:   skillRegistry,
+		ConfirmManager:  confirmation.NewManager(),
+		WebSearch:       websearch.NewOrchestrator(),
+		SessionManager:  sessionMgr,
+		Cache:           cacheMgr,
+		StatusLine:      statusLineMgr,
+		OllamaContext:   ollamaContext,
+		HandlerRegistry: handlerRegistry,
+		Mode:            cfg.Mode,
+		WorkDir:         cfg.WorkDir,
+		History:         []llm.Message{},
+		RecentFiles:     []string{},
+		ColorGreen:      color.New(color.FgGreen, color.Bold),
+		ColorBlue:       color.New(color.FgBlue, color.Bold),
+		ColorYellow:     color.New(color.FgYellow),
+		ColorRed:        color.New(color.FgRed),
 	}
 
 	return agent, nil
@@ -177,39 +208,39 @@ func NewAgent(cfg Config) (*Agent, error) {
 
 // GetSessionManager retorna o gerenciador de sessões
 func (a *Agent) GetSessionManager() *session.Manager {
-	return a.sessionManager
+	return a.SessionManager
 }
 
 // GetCache retorna o gerenciador de cache
 func (a *Agent) GetCache() *cache.Manager {
-	return a.cache
+	return a.Cache
 }
 
 // GetCommandRegistry retorna o registry de comandos
 func (a *Agent) GetCommandRegistry() *commands.Registry {
-	return a.commandRegistry
+	return a.CommandRegistry
 }
 
 // GetSkillRegistry retorna o registry de skills
 func (a *Agent) GetSkillRegistry() *skills.Registry {
-	return a.skillRegistry
+	return a.SkillRegistry
 }
 
 // ProcessMessage processa mensagem do usuário
 func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 	// Adicionar mensagem ao histórico
-	a.mu.Lock()
-	a.history = append(a.history, llm.Message{
+	a.Mu.Lock()
+	a.History = append(a.History, llm.Message{
 		Role:    "user",
 		Content: userMessage,
 	})
-	a.mu.Unlock()
+	a.Mu.Unlock()
 
 	// Detectar intenção com histórico da conversa
-	a.colorBlue.Println("\n🔍 Detectando intenção...")
+	a.ColorBlue.Println("\n🔍 Detectando intenção...")
 
 	recentFiles := a.getRecentFiles()
-	detectionResult, err := a.intentDetector.DetectWithHistory(ctx, userMessage, a.workDir, recentFiles, a.history)
+	detectionResult, err := a.IntentDetector.DetectWithHistory(ctx, userMessage, a.WorkDir, recentFiles, a.History)
 	if err != nil {
 		return fmt.Errorf("detect intent: %w", err)
 	}
@@ -223,16 +254,16 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 	}
 
 	// Adicionar resposta ao histórico
-	a.mu.Lock()
-	a.history = append(a.history, llm.Message{
+	a.Mu.Lock()
+	a.History = append(a.History, llm.Message{
 		Role:    "assistant",
 		Content: response,
 	})
-	a.mu.Unlock()
+	a.Mu.Unlock()
 
 	// Mostrar resposta (se não foi mostrada em streaming)
 	if detectionResult.Intent != intent.IntentQuestion && response != "" {
-		a.colorGreen.Println("\n🤖 Assistente:")
+		a.ColorGreen.Println("\n🤖 Assistente:")
 		fmt.Println(response)
 		fmt.Println()
 	}
@@ -242,41 +273,33 @@ func (a *Agent) ProcessMessage(ctx context.Context, userMessage string) error {
 
 // handleIntent processa a intenção detectada
 func (a *Agent) handleIntent(ctx context.Context, result *intent.DetectionResult, userMessage string) (string, error) {
-	switch result.Intent {
-	case intent.IntentReadFile:
-		return a.handleReadFile(ctx, result, userMessage)
+	// Atualizar DetectionResult com userMessage
+	result.UserMessage = userMessage
 
-	case intent.IntentWriteFile:
-		return a.handleWriteFile(ctx, result, userMessage)
+	// Construir dependencies
+	deps := a.buildDependencies()
 
-	case intent.IntentExecuteCommand:
-		return a.handleExecuteCommand(ctx, result)
-
-	case intent.IntentSearchCode:
-		return a.handleSearchCode(ctx, result)
-
-	case intent.IntentAnalyzeProject:
-		return a.handleAnalyzeProject(ctx, result)
-
-	case intent.IntentGitOperation:
-		return a.handleGitOperation(ctx, result, userMessage)
-
-	case intent.IntentWebSearch:
-		return a.handleWebSearch(ctx, result, userMessage)
-
-	case intent.IntentQuestion:
-		return a.handleQuestion(ctx, userMessage)
-
-	default:
-		return a.handleQuestion(ctx, userMessage)
+	// Delegar para HandlerRegistry
+	response, err := a.HandlerRegistry.Handle(ctx, deps, result)
+	if err != nil {
+		return "", err
 	}
+
+	// Atualizar recentFiles se o handler modificou
+	if len(deps.RecentFiles) > len(a.RecentFiles) {
+		a.Mu.Lock()
+		a.RecentFiles = deps.RecentFiles
+		a.Mu.Unlock()
+	}
+
+	return response, nil
 }
 
 // getRecentFiles obtém lista de arquivos recentes no diretório
 func (a *Agent) getRecentFiles() []string {
 	files := []string{}
 
-	entries, err := os.ReadDir(a.workDir)
+	entries, err := os.ReadDir(a.WorkDir)
 	if err != nil {
 		return files
 	}
@@ -296,31 +319,31 @@ func (a *Agent) getRecentFiles() []string {
 
 // GetHistory retorna histórico de mensagens
 func (a *Agent) GetHistory() []llm.Message {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return append([]llm.Message{}, a.history...)
+	a.Mu.Lock()
+	defer a.Mu.Unlock()
+	return append([]llm.Message{}, a.History...)
 }
 
 // ClearHistory limpa histórico
 func (a *Agent) ClearHistory() {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.history = []llm.Message{}
+	a.Mu.Lock()
+	defer a.Mu.Unlock()
+	a.History = []llm.Message{}
 }
 
 // SetMode altera modo de operação
 func (a *Agent) SetMode(mode modes.OperationMode) {
-	a.mode = mode
+	a.Mode = mode
 }
 
 // GetMode retorna modo atual
 func (a *Agent) GetMode() modes.OperationMode {
-	return a.mode
+	return a.Mode
 }
 
 // GetWorkDir retorna diretório de trabalho
 func (a *Agent) GetWorkDir() string {
-	return a.workDir
+	return a.WorkDir
 }
 
 // SetWorkDir altera diretório de trabalho
@@ -339,27 +362,56 @@ func (a *Agent) SetWorkDir(dir string) error {
 		return fmt.Errorf("%s is not a directory", absDir)
 	}
 
-	a.workDir = absDir
+	a.WorkDir = absDir
 	return nil
 }
 
 // AddRecentFile adiciona arquivo à lista de arquivos recentes
 func (a *Agent) AddRecentFile(filePath string) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.Mu.Lock()
+	defer a.Mu.Unlock()
 
 	// Adicionar no início da lista
-	a.recentFiles = append([]string{filePath}, a.recentFiles...)
+	a.RecentFiles = append([]string{filePath}, a.RecentFiles...)
 
 	// Manter apenas últimos 10 arquivos
-	if len(a.recentFiles) > 10 {
-		a.recentFiles = a.recentFiles[:10]
+	if len(a.RecentFiles) > 10 {
+		a.RecentFiles = a.RecentFiles[:10]
 	}
 }
 
 // GetRecentlyModifiedFiles retorna arquivos recentemente modificados
 func (a *Agent) GetRecentlyModifiedFiles() []string {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return append([]string{}, a.recentFiles...)
+	a.Mu.Lock()
+	defer a.Mu.Unlock()
+	return append([]string{}, a.RecentFiles...)
+}
+
+// buildDependencies cria Dependencies struct a partir do Agent
+func (a *Agent) buildDependencies() *handlers.Dependencies {
+	// Converter history para handlers.Message
+	history := a.GetHistory()
+	handlerHistory := make([]handlers.Message, len(history))
+	for i, msg := range history {
+		handlerHistory[i] = handlers.Message{
+			Role:    msg.Role,
+			Content: msg.Content,
+		}
+	}
+
+	return &handlers.Dependencies{
+		ToolRegistry:    handlers.NewToolRegistryAdapter(a.ToolRegistry),
+		CommandRegistry: handlers.NewCommandRegistryAdapter(a.CommandRegistry),
+		SkillRegistry:   handlers.NewSkillRegistryAdapter(a.SkillRegistry),
+		ConfirmManager:  handlers.NewConfirmationManagerAdapter(a.ConfirmManager),
+		SessionManager:  handlers.NewSessionManagerAdapter(a.SessionManager),
+		CacheManager:    handlers.NewCacheManagerAdapter(a.Cache),
+		LLMClient:       handlers.NewLLMClientAdapter(a.LLMClient),
+		WebSearch:       handlers.NewWebSearchClientAdapter(a.WebSearch),
+		IntentDetector:  handlers.NewIntentDetectorAdapter(a.IntentDetector),
+		Mode:            handlers.NewOperationModeAdapter(a.Mode),
+		WorkDir:         a.WorkDir,
+		History:         handlerHistory,
+		RecentFiles:     a.GetRecentlyModifiedFiles(),
+	}
 }

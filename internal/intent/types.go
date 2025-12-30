@@ -34,8 +34,9 @@ const (
 
 // DetectionResult resultado da detecção
 type DetectionResult struct {
-	Intent     Intent                 `json:"intent"`
-	Confidence float64                `json:"confidence"`
-	Parameters map[string]interface{} `json:"parameters"`
-	Reasoning  string                 `json:"reasoning"`
+	Intent      Intent                 `json:"intent"`
+	Confidence  float64                `json:"confidence"`
+	Parameters  map[string]interface{} `json:"parameters"`
+	Reasoning   string                 `json:"reasoning"`
+	UserMessage string                 `json:"user_message,omitempty"`
 }

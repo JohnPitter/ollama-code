@@ -25,19 +25,19 @@ func TestNewAgent(t *testing.T) {
 	}
 
 	// Verify defaults
-	if agent.llmClient == nil {
+	if agent.LLMClient == nil {
 		t.Error("LLM client not initialized")
 	}
-	if agent.intentDetector == nil {
+	if agent.IntentDetector == nil {
 		t.Error("Intent detector not initialized")
 	}
-	if agent.toolRegistry == nil {
+	if agent.ToolRegistry == nil {
 		t.Error("Tool registry not initialized")
 	}
-	if agent.commandRegistry == nil {
+	if agent.CommandRegistry == nil {
 		t.Error("Command registry not initialized")
 	}
-	if agent.confirmManager == nil {
+	if agent.ConfirmManager == nil {
 		t.Error("Confirmation manager not initialized")
 	}
 }
@@ -51,11 +51,11 @@ func TestNewAgent_DefaultValues(t *testing.T) {
 	}
 
 	// Check defaults
-	if agent.mode != modes.ModeInteractive {
-		t.Errorf("Expected default mode interactive, got %s", agent.mode)
+	if agent.Mode != modes.ModeInteractive {
+		t.Errorf("Expected default mode interactive, got %s", agent.Mode)
 	}
 
-	if agent.workDir == "" {
+	if agent.WorkDir == "" {
 		t.Error("Work directory should not be empty")
 	}
 }
@@ -72,7 +72,7 @@ func TestNewAgent_WithSessions(t *testing.T) {
 		t.Fatalf("Failed to create agent: %v", err)
 	}
 
-	if agent.sessionManager == nil {
+	if agent.SessionManager == nil {
 		t.Error("Session manager should be initialized when enabled")
 	}
 }
@@ -89,7 +89,7 @@ func TestNewAgent_WithCache(t *testing.T) {
 		t.Fatalf("Failed to create agent: %v", err)
 	}
 
-	if agent.cache == nil {
+	if agent.Cache == nil {
 		t.Error("Cache should be initialized when enabled")
 	}
 }
@@ -148,19 +148,19 @@ func TestClearHistory(t *testing.T) {
 	agent, _ := NewAgent(Config{})
 
 	// Add some history manually
-	agent.history = append(agent.history, llm.Message{
+	agent.History = append(agent.History, llm.Message{
 		Role:    "user",
 		Content: "test",
 	})
 
-	if len(agent.history) == 0 {
+	if len(agent.History) == 0 {
 		t.Error("History should not be empty")
 	}
 
 	agent.ClearHistory()
 
-	if len(agent.history) != 0 {
-		t.Errorf("History should be empty after clear, got %d messages", len(agent.history))
+	if len(agent.History) != 0 {
+		t.Errorf("History should be empty after clear, got %d messages", len(agent.History))
 	}
 }
 
