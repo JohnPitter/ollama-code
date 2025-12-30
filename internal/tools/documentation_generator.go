@@ -31,8 +31,13 @@ func (d *DocumentationGenerator) Description() string {
 	return "Gera documentação automática (GoDoc, JSDoc, README.md)"
 }
 
+// RequiresConfirmation indica se requer confirmação
+func (d *DocumentationGenerator) RequiresConfirmation() bool {
+	return false
+}
+
 // Execute executa geração de documentação
-func (d *DocumentationGenerator) Execute(ctx context.Context, params map[string]interface{}) Result {
+func (d *DocumentationGenerator) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	docType, ok := params["type"].(string)
 	if !ok {
 		docType = "auto"
@@ -55,19 +60,19 @@ func (d *DocumentationGenerator) Execute(ctx context.Context, params map[string]
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tipo de documentação desconhecido: %s", docType),
-		}
+		}, nil
 	}
 }
 
 // generateAuto detecta tipo de projeto e gera documentação apropriada
-func (d *DocumentationGenerator) generateAuto() Result {
+func (d *DocumentationGenerator) generateAuto() (Result, error) {
 	var output strings.Builder
 	output.WriteString("📚 Gerando Documentação Automática\n\n")
 
 	// Check for Go project
 	if _, err := os.Stat(filepath.Join(d.workDir, "go.mod")); err == nil {
 		output.WriteString("✓ Projeto Go detectado\n")
-		result := d.generateGoDoc("")
+		result, _ := d.generateGoDoc("")
 		if result.Success {
 			output.WriteString(result.Message)
 		}
@@ -76,7 +81,7 @@ func (d *DocumentationGenerator) generateAuto() Result {
 	// Check for Node.js project
 	if _, err := os.Stat(filepath.Join(d.workDir, "package.json")); err == nil {
 		output.WriteString("✓ Projeto Node.js detectado\n")
-		result := d.generateJSDoc("")
+		result, _ := d.generateJSDoc("")
 		if result.Success {
 			output.WriteString(result.Message)
 		}
@@ -86,7 +91,7 @@ func (d *DocumentationGenerator) generateAuto() Result {
 	readmePath := filepath.Join(d.workDir, "README.md")
 	if _, err := os.Stat(readmePath); os.IsNotExist(err) {
 		output.WriteString("✓ Gerando README.md\n")
-		result := d.generateReadme()
+		result, _ := d.generateReadme()
 		if result.Success {
 			output.WriteString(result.Message)
 		}
@@ -95,11 +100,11 @@ func (d *DocumentationGenerator) generateAuto() Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // generateGoDoc gera documentação Go
-func (d *DocumentationGenerator) generateGoDoc(target string) Result {
+func (d *DocumentationGenerator) generateGoDoc(target string) (Result, error) {
 	var output strings.Builder
 	output.WriteString("📖 Documentação Go (GoDoc)\n\n")
 
@@ -125,11 +130,11 @@ func (d *DocumentationGenerator) generateGoDoc(target string) Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // generateJSDoc gera documentação JavaScript/TypeScript
-func (d *DocumentationGenerator) generateJSDoc(target string) Result {
+func (d *DocumentationGenerator) generateJSDoc(target string) (Result, error) {
 	var output strings.Builder
 	output.WriteString("📖 Documentação JavaScript/TypeScript (JSDoc)\n\n")
 
@@ -152,11 +157,11 @@ func (d *DocumentationGenerator) generateJSDoc(target string) Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // generateReadme gera README.md básico
-func (d *DocumentationGenerator) generateReadme() Result {
+func (d *DocumentationGenerator) generateReadme() (Result, error) {
 	readmePath := filepath.Join(d.workDir, "README.md")
 
 	// Get project name from directory
@@ -193,17 +198,17 @@ func (d *DocumentationGenerator) generateReadme() Result {
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Erro ao criar README.md: %s", err.Error()),
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  fmt.Sprintf("✅ README.md criado em: %s\n", readmePath),
-	}
+	}, nil
 }
 
 // generateAPIDoc gera documentação de API
-func (d *DocumentationGenerator) generateAPIDoc() Result {
+func (d *DocumentationGenerator) generateAPIDoc() (Result, error) {
 	var output strings.Builder
 	output.WriteString("📖 Documentação de API\n\n")
 
@@ -235,7 +240,7 @@ func (d *DocumentationGenerator) generateAPIDoc() Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // Schema retorna schema JSON da tool

@@ -4,16 +4,12 @@ build/
 *.dll
 *.so
 *.dylib
-ollama-code
-ollama-code.exe
-
-# Test binaries
+dist/
 *.test
-*.out
-*.prof
 
-# Go workspace file
-go.work
+# Go
+*.out
+vendor/
 
 # IDE
 .vscode/
@@ -26,42 +22,25 @@ go.work
 .DS_Store
 Thumbs.db
 
-# Config files with sensitive data
+# Config
 config.json
-.env
-*.key
-*.pem
+*.local.json
 
-# Logs
+# Runtime data
+.ollama-code/
 *.log
 logs/
 
-# Cache
-.cache/
-*.cache
+# Test coverage
+coverage.txt
+coverage.html
+*.cover
 
 # Temporary files
-tmp/
-temp/
 *.tmp
-
-# Coverage
-*.coverprofile
-coverage.html
-coverage.txt
-
-# Build artifacts
-dist/
-release/
+*.bak
+*.old
+*.new
 
 # Dependencies
-vendor/
-
-# User-specific
-.ollama-code/
-.local/
-
-# Backup files
-*.bak
-*.backup
-*~
+node_modules/

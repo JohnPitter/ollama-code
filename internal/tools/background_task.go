@@ -2,7 +2,10 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -31,17 +34,27 @@ type BackgroundTask struct {
 
 // BackgroundTaskManager gerencia tarefas em background
 type BackgroundTaskManager struct {
-	workDir string
-	tasks   map[string]*BackgroundTask
-	mu      sync.RWMutex
+	workDir     string
+	tasks       map[string]*BackgroundTask
+	mu          sync.RWMutex
+	taskCounter int64
+	storageFile string
 }
 
 // NewBackgroundTaskManager cria novo gerenciador de tarefas
 func NewBackgroundTaskManager(workDir string) *BackgroundTaskManager {
-	return &BackgroundTaskManager{
-		workDir: workDir,
-		tasks:   make(map[string]*BackgroundTask),
+	storageFile := filepath.Join(workDir, ".ollama-code", "background_tasks.json")
+
+	btm := &BackgroundTaskManager{
+		workDir:     workDir,
+		tasks:       make(map[string]*BackgroundTask),
+		storageFile: storageFile,
 	}
+
+	// Load existing tasks from disk
+	btm.loadTasks()
+
+	return btm
 }
 
 // Name retorna nome da tool
@@ -54,8 +67,13 @@ func (b *BackgroundTaskManager) Description() string {
 	return "Gerencia tarefas assíncronas em background"
 }
 
+// RequiresConfirmation indica se requer confirmação
+func (b *BackgroundTaskManager) RequiresConfirmation() bool {
+	return false
+}
+
 // Execute executa operação de background task
-func (b *BackgroundTaskManager) Execute(ctx context.Context, params map[string]interface{}) Result {
+func (b *BackgroundTaskManager) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	action, ok := params["action"].(string)
 	if !ok {
 		action = "list"
@@ -80,21 +98,23 @@ func (b *BackgroundTaskManager) Execute(ctx context.Context, params map[string]i
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Ação desconhecida: %s", action),
-		}
+		}, nil
 	}
 }
 
 // startTask inicia nova tarefa em background
-func (b *BackgroundTaskManager) startTask(taskName string, params map[string]interface{}) Result {
+func (b *BackgroundTaskManager) startTask(taskName string, params map[string]interface{}) (Result, error) {
 	if taskName == "" {
 		return Result{
 			Success: false,
 			Error:   "Nome da tarefa não especificado",
-		}
+		}, nil
 	}
 
-	// Generate task ID
-	taskID := fmt.Sprintf("task_%d", time.Now().UnixNano())
+	// Generate task ID with counter to ensure uniqueness
+	b.mu.Lock()
+	b.taskCounter++
+	taskID := fmt.Sprintf("task_%d_%d", time.Now().UnixNano(), b.taskCounter)
 
 	task := &BackgroundTask{
 		ID:        taskID,
@@ -104,9 +124,11 @@ func (b *BackgroundTaskManager) startTask(taskName string, params map[string]int
 		StartTime: time.Now(),
 	}
 
-	b.mu.Lock()
 	b.tasks[taskID] = task
 	b.mu.Unlock()
+
+	// Auto-save new task
+	go b.saveTasks()
 
 	// Start task in goroutine
 	go b.executeTask(taskID, taskName, params)
@@ -114,7 +136,7 @@ func (b *BackgroundTaskManager) startTask(taskName string, params map[string]int
 	return Result{
 		Success: true,
 		Message:  fmt.Sprintf("✅ Tarefa iniciada: %s (ID: %s)\n", taskName, taskID),
-	}
+	}, nil
 }
 
 // executeTask executa tarefa específica
@@ -192,7 +214,7 @@ func (b *BackgroundTaskManager) runAnalysis(taskID string) {
 }
 
 // getStatus obtém status de tarefa
-func (b *BackgroundTaskManager) getStatus(taskID string) Result {
+func (b *BackgroundTaskManager) getStatus(taskID string) (Result, error) {
 	b.mu.RLock()
 	task, exists := b.tasks[taskID]
 	b.mu.RUnlock()
@@ -201,7 +223,7 @@ func (b *BackgroundTaskManager) getStatus(taskID string) Result {
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tarefa não encontrada: %s", taskID),
-		}
+		}, nil
 	}
 
 	output := fmt.Sprintf(`📊 Status da Tarefa
@@ -230,11 +252,11 @@ Iniciado: %s
 	return Result{
 		Success: true,
 		Message:  output,
-	}
+	}, nil
 }
 
 // listTasks lista todas as tarefas
-func (b *BackgroundTaskManager) listTasks() Result {
+func (b *BackgroundTaskManager) listTasks() (Result, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -242,7 +264,7 @@ func (b *BackgroundTaskManager) listTasks() Result {
 		return Result{
 			Success: true,
 			Message:  "Nenhuma tarefa em execução\n",
-		}
+		}, nil
 	}
 
 	var output string
@@ -265,11 +287,11 @@ func (b *BackgroundTaskManager) listTasks() Result {
 	return Result{
 		Success: true,
 		Message:  output,
-	}
+	}, nil
 }
 
 // cancelTask cancela tarefa
-func (b *BackgroundTaskManager) cancelTask(taskID string) Result {
+func (b *BackgroundTaskManager) cancelTask(taskID string) (Result, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -278,28 +300,31 @@ func (b *BackgroundTaskManager) cancelTask(taskID string) Result {
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tarefa não encontrada: %s", taskID),
-		}
+		}, nil
 	}
 
 	if task.Status != TaskStatusRunning {
 		return Result{
 			Success: false,
 			Error:   "Tarefa não está em execução",
-		}
+		}, nil
 	}
 
 	task.Status = TaskStatusFailed
 	task.Error = "Cancelado pelo usuário"
 	task.EndTime = time.Now()
 
+	// Auto-save after cancel
+	go b.saveTasks()
+
 	return Result{
 		Success: true,
 		Message:  fmt.Sprintf("✅ Tarefa cancelada: %s\n", taskID),
-	}
+	}, nil
 }
 
 // getResult obtém resultado de tarefa
-func (b *BackgroundTaskManager) getResult(taskID string) Result {
+func (b *BackgroundTaskManager) getResult(taskID string) (Result, error) {
 	b.mu.RLock()
 	task, exists := b.tasks[taskID]
 	b.mu.RUnlock()
@@ -308,20 +333,20 @@ func (b *BackgroundTaskManager) getResult(taskID string) Result {
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tarefa não encontrada: %s", taskID),
-		}
+		}, nil
 	}
 
 	if task.Status != TaskStatusCompleted {
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tarefa ainda não concluída (status: %s)", task.Status),
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  task.Result,
-	}
+	}, nil
 }
 
 // Helper methods to update task state
@@ -331,6 +356,8 @@ func (b *BackgroundTaskManager) updateTaskStatus(taskID string, status TaskStatu
 	if task, exists := b.tasks[taskID]; exists {
 		task.Status = status
 	}
+	// Auto-save after update (run in background to avoid blocking)
+	go b.saveTasks()
 }
 
 func (b *BackgroundTaskManager) updateTaskProgress(taskID string, progress float64) {
@@ -339,6 +366,8 @@ func (b *BackgroundTaskManager) updateTaskProgress(taskID string, progress float
 	if task, exists := b.tasks[taskID]; exists {
 		task.Progress = progress
 	}
+	// Auto-save after update
+	go b.saveTasks()
 }
 
 func (b *BackgroundTaskManager) updateTaskResult(taskID string, result string) {
@@ -347,6 +376,8 @@ func (b *BackgroundTaskManager) updateTaskResult(taskID string, result string) {
 	if task, exists := b.tasks[taskID]; exists {
 		task.Result = result
 	}
+	// Auto-save after update
+	go b.saveTasks()
 }
 
 func (b *BackgroundTaskManager) updateTaskComplete(taskID string, result string) {
@@ -358,6 +389,8 @@ func (b *BackgroundTaskManager) updateTaskComplete(taskID string, result string)
 		task.Result = result
 		task.EndTime = time.Now()
 	}
+	// Auto-save after update
+	go b.saveTasks()
 }
 
 func (b *BackgroundTaskManager) updateTaskError(taskID string, errMsg string) {
@@ -368,6 +401,64 @@ func (b *BackgroundTaskManager) updateTaskError(taskID string, errMsg string) {
 		task.Error = errMsg
 		task.EndTime = time.Now()
 	}
+	// Auto-save after update
+	go b.saveTasks()
+}
+
+// saveTasks persiste tasks em disco
+func (b *BackgroundTaskManager) saveTasks() error {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	// Create directory if it doesn't exist
+	dir := filepath.Dir(b.storageFile)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create storage directory: %w", err)
+	}
+
+	// Serialize tasks to JSON
+	data, err := json.MarshalIndent(b.tasks, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal tasks: %w", err)
+	}
+
+	// Write to file
+	if err := os.WriteFile(b.storageFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to write tasks file: %w", err)
+	}
+
+	return nil
+}
+
+// loadTasks carrega tasks do disco
+func (b *BackgroundTaskManager) loadTasks() error {
+	// Check if file exists
+	if _, err := os.Stat(b.storageFile); os.IsNotExist(err) {
+		return nil // No tasks to load, not an error
+	}
+
+	// Read file
+	data, err := os.ReadFile(b.storageFile)
+	if err != nil {
+		return fmt.Errorf("failed to read tasks file: %w", err)
+	}
+
+	// Deserialize tasks
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if err := json.Unmarshal(data, &b.tasks); err != nil {
+		return fmt.Errorf("failed to unmarshal tasks: %w", err)
+	}
+
+	// Update task counter to avoid ID conflicts
+	for range b.tasks {
+		// Extract counter from task ID (format: task_timestamp_counter)
+		// This is a simple approach, could be improved
+		b.taskCounter++
+	}
+
+	return nil
 }
 
 // Schema retorna schema JSON da tool

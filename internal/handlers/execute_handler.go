@@ -28,17 +28,37 @@ func (h *ExecuteHandler) Handle(ctx context.Context, deps *Dependencies, result 
 		return "", fmt.Errorf("comando não especificado")
 	}
 
+	// 📝 Criar TODO para tracking
+	var todoID string
+	if deps.TodoManager != nil {
+		id, err := deps.TodoManager.Add(
+			fmt.Sprintf("Executando comando: %s", h.truncateCommand(command)),
+			fmt.Sprintf("Executando %s", h.truncateCommand(command)),
+		)
+		if err == nil {
+			todoID = id
+		}
+	}
+
 	// Verificar se comando é perigoso
 	if h.isDangerousCommand(command) {
 		if !deps.Mode.RequiresConfirmation() {
+			// Cancelar TODO
+			if todoID != "" && deps.TodoManager != nil {
+				deps.TodoManager.Delete(todoID)
+			}
 			return "", fmt.Errorf("comando perigoso requer modo interativo: %s", command)
 		}
 
-		// Pedir confirmação
+		// Pedir confirmação (com opção de cancelar)
 		confirmed, err := deps.ConfirmManager.Confirm(
 			fmt.Sprintf("⚠️  Comando potencialmente perigoso. Executar: %s ?", command),
 		)
 		if err != nil || !confirmed {
+			// Cancelar TODO
+			if todoID != "" && deps.TodoManager != nil {
+				deps.TodoManager.Delete(todoID)
+			}
 			return "Comando cancelado pelo usuário", nil
 		}
 	}
@@ -50,14 +70,35 @@ func (h *ExecuteHandler) Handle(ctx context.Context, deps *Dependencies, result 
 
 	toolResult, err := deps.ToolRegistry.Execute(ctx, "command_executor", params)
 	if err != nil {
+		// ❌ Falha na execução
+		if todoID != "" && deps.TodoManager != nil {
+			deps.TodoManager.Delete(todoID)
+		}
 		return "", fmt.Errorf("erro ao executar comando: %w", err)
 	}
 
 	if !toolResult.Success {
+		// ❌ Comando retornou erro
+		if todoID != "" && deps.TodoManager != nil {
+			deps.TodoManager.Delete(todoID)
+		}
 		return "", fmt.Errorf("erro: %s", toolResult.Error)
 	}
 
+	// ✅ Completar TODO
+	if todoID != "" && deps.TodoManager != nil {
+		deps.TodoManager.Complete(todoID)
+	}
+
 	return toolResult.Message, nil
+}
+
+// truncateCommand trunca comando para exibição
+func (h *ExecuteHandler) truncateCommand(command string) string {
+	if len(command) > 50 {
+		return command[:47] + "..."
+	}
+	return command
 }
 
 // isDangerousCommand verifica se comando é perigoso

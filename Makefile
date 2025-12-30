@@ -131,6 +131,43 @@ else
 	@file $(BUILD_DIR)/$(BINARY)
 endif
 
+# CI/CD targets
+ci: deps lint test build
+	@echo "✅ CI pipeline completed successfully"
+
+ci-full: deps lint test-coverage build-all
+	@echo "✅ Full CI pipeline completed successfully"
+
+# Test specific tools
+test-tools:
+	@echo "🧪 Running tools tests..."
+	@go test -v ./internal/tools/...
+
+# GoReleaser dry-run
+release-dry-run:
+	@echo "🎯 Running GoReleaser dry-run..."
+	@which goreleaser > /dev/null || (echo "Installing goreleaser..." && go install github.com/goreleaser/goreleaser@latest)
+	@goreleaser release --snapshot --skip-publish --clean
+	@echo "✅ Dry-run complete"
+
+# Install CI tools
+ci-tools:
+	@echo "🔧 Installing CI tools..."
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/goreleaser/goreleaser@latest
+	@go install golang.org/x/tools/cmd/goimports@latest
+	@echo "✅ CI tools installed"
+
+# Go vet
+vet:
+	@echo "🔍 Running go vet..."
+	@go vet ./...
+	@echo "✅ Vet complete"
+
+# Check all (lint + vet + test)
+check: lint vet test
+	@echo "✅ All checks passed"
+
 # Ajuda
 help:
 	@echo "Available targets:"
@@ -142,12 +179,19 @@ help:
 	@echo "  make install-local - Install to ~/bin (no sudo)"
 	@echo "  make clean         - Remove binary"
 	@echo "  make test          - Run tests"
+	@echo "  make test-tools    - Run tools tests only"
 	@echo "  make test-coverage - Run tests with coverage"
 	@echo "  make deps          - Download dependencies"
 	@echo "  make lint          - Run linter"
 	@echo "  make fmt           - Format code"
+	@echo "  make vet           - Run go vet"
+	@echo "  make check         - Run all checks (lint + vet + test)"
 	@echo "  make benchmark     - Run benchmarks"
 	@echo "  make release       - Build release version"
+	@echo "  make ci            - Run CI pipeline (lint + test + build)"
+	@echo "  make ci-full       - Run full CI pipeline (lint + coverage + build-all)"
+	@echo "  make ci-tools      - Install CI tools"
+	@echo "  make release-dry-run - Test GoReleaser without publishing"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make build && ./build/ollama-code chat"

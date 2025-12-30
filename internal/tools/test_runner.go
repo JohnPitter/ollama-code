@@ -31,8 +31,13 @@ func (t *TestRunner) Description() string {
 	return "Executa testes automaticamente e rastreia cobertura"
 }
 
+// RequiresConfirmation indica se requer confirmação
+func (t *TestRunner) RequiresConfirmation() bool {
+	return false
+}
+
 // Execute executa testes
-func (t *TestRunner) Execute(ctx context.Context, params map[string]interface{}) Result {
+func (t *TestRunner) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	action, ok := params["action"].(string)
 	if !ok {
 		action = "run"
@@ -52,12 +57,12 @@ func (t *TestRunner) Execute(ctx context.Context, params map[string]interface{})
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Ação desconhecida: %s", action),
-		}
+		}, nil
 	}
 }
 
 // runTests executa todos os testes
-func (t *TestRunner) runTests(params map[string]interface{}) Result {
+func (t *TestRunner) runTests(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("🧪 Executando Testes\n\n")
 
@@ -103,7 +108,7 @@ func (t *TestRunner) runTests(params map[string]interface{}) Result {
 		return Result{
 			Success: false,
 			Error:   "Tipo de projeto não suportado para testes",
-		}
+		}, nil
 	}
 
 	output.WriteString(string(testOutput))
@@ -114,7 +119,7 @@ func (t *TestRunner) runTests(params map[string]interface{}) Result {
 			Success: false,
 			Message:  output.String(),
 			Error:   "Alguns testes falharam",
-		}
+		}, nil
 	}
 
 	output.WriteString("\n✅ Todos os testes passaram!\n")
@@ -122,11 +127,11 @@ func (t *TestRunner) runTests(params map[string]interface{}) Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // runCoverage executa testes com cobertura
-func (t *TestRunner) runCoverage(params map[string]interface{}) Result {
+func (t *TestRunner) runCoverage(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("📊 Executando Testes com Cobertura\n\n")
 
@@ -175,7 +180,7 @@ func (t *TestRunner) runCoverage(params map[string]interface{}) Result {
 		return Result{
 			Success: false,
 			Error:   "Tipo de projeto não suportado",
-		}
+		}, nil
 	}
 
 	if err != nil {
@@ -183,17 +188,17 @@ func (t *TestRunner) runCoverage(params map[string]interface{}) Result {
 			Success: false,
 			Message:  output.String(),
 			Error:   err.Error(),
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // runSingleTest executa um teste específico
-func (t *TestRunner) runSingleTest(testPath string) Result {
+func (t *TestRunner) runSingleTest(testPath string) (Result, error) {
 	var output strings.Builder
 	output.WriteString(fmt.Sprintf("🧪 Executando Teste: %s\n\n", testPath))
 
@@ -219,7 +224,7 @@ func (t *TestRunner) runSingleTest(testPath string) Result {
 		return Result{
 			Success: false,
 			Error:   "Tipo de projeto não suportado",
-		}
+		}, nil
 	}
 
 	testOutput, err := cmd.CombinedOutput()
@@ -230,17 +235,17 @@ func (t *TestRunner) runSingleTest(testPath string) Result {
 			Success: false,
 			Message:  output.String(),
 			Error:   err.Error(),
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // watchTests executa testes em modo watch
-func (t *TestRunner) watchTests() Result {
+func (t *TestRunner) watchTests() (Result, error) {
 	var output strings.Builder
 	output.WriteString("👀 Modo Watch de Testes\n\n")
 
@@ -263,7 +268,7 @@ func (t *TestRunner) watchTests() Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // detectProjectType detecta tipo de projeto

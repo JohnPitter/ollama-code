@@ -4,7 +4,10 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-90_passing-success)](.)
+[![CI/CD](https://github.com/johnpitter/ollama-code/workflows/CI/CD/badge.svg)](https://github.com/johnpitter/ollama-code/actions)
+[![Tests](https://img.shields.io/badge/Tests-143_passing-success)](.)
+[![Coverage](https://img.shields.io/badge/Coverage-Codecov-blue)](https://codecov.io/gh/johnpitter/ollama-code)
+[![Go Report Card](https://goreportcard.com/badge/github.com/johnpitter/ollama-code)](https://goreportcard.com/report/github.com/johnpitter/ollama-code)
 
 ## 📖 Índice
 

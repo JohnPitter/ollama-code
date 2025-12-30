@@ -15,6 +15,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
+	"github.com/johnpitter/ollama-code/internal/diff"
 )
 
 // ToolRegistryAdapter adapta tools.Registry para handlers.ToolRegistry
@@ -377,4 +378,101 @@ func (a *OperationModeAdapter) AllowsWrites() bool {
 
 func (a *OperationModeAdapter) RequiresConfirmation() bool {
 	return a.mode.RequiresConfirmation()
+}
+
+// DiffManagerAdapter adapta diff.Differ para handlers.DiffManager
+type DiffManagerAdapter struct {
+	differ *diff.Differ
+}
+
+func NewDiffManagerAdapter(differ *diff.Differ) *DiffManagerAdapter {
+	return &DiffManagerAdapter{differ: differ}
+}
+
+func (a *DiffManagerAdapter) ComputeDiff(filePath, oldContent, newContent string) interface{} {
+	if a.differ == nil {
+		return nil
+	}
+	return a.differ.ComputeDiff(filePath, oldContent, newContent)
+}
+
+func (a *DiffManagerAdapter) ApplyEdit(filePath, content string, editRange interface{}) (string, interface{}, error) {
+	if a.differ == nil {
+		return content, nil, nil
+	}
+
+	er, ok := editRange.(diff.EditRange)
+	if !ok {
+		return "", nil, fmt.Errorf("invalid edit range type")
+	}
+
+	return a.differ.ApplyEdit(filePath, content, er)
+}
+
+func (a *DiffManagerAdapter) Rollback(filePath string) (string, error) {
+	if a.differ == nil {
+		return "", fmt.Errorf("diff manager not available")
+	}
+	return a.differ.Rollback(filePath)
+}
+
+func (a *DiffManagerAdapter) GetHistory(filePath string) interface{} {
+	if a.differ == nil {
+		return nil
+	}
+	return a.differ.GetHistory(filePath)
+}
+
+func (a *DiffManagerAdapter) ClearHistory() {
+	if a.differ != nil {
+		a.differ.ClearHistory()
+	}
+}
+
+// PreviewManagerAdapter adapta diff.Previewer para handlers.PreviewManager
+type PreviewManagerAdapter struct {
+	previewer *diff.Previewer
+}
+
+func NewPreviewManagerAdapter(previewer *diff.Previewer) *PreviewManagerAdapter {
+	return &PreviewManagerAdapter{previewer: previewer}
+}
+
+func (a *PreviewManagerAdapter) Preview(diffInterface interface{}) string {
+	if a.previewer == nil {
+		return ""
+	}
+
+	fileDiff, ok := diffInterface.(*diff.FileDiff)
+	if !ok {
+		return ""
+	}
+
+	return a.previewer.Preview(fileDiff)
+}
+
+func (a *PreviewManagerAdapter) PreviewRange(filePath, oldContent string, editRange interface{}) string {
+	if a.previewer == nil {
+		return ""
+	}
+
+	er, ok := editRange.(diff.EditRange)
+	if !ok {
+		return ""
+	}
+
+	return a.previewer.PreviewRange(filePath, oldContent, er)
+}
+
+func (a *PreviewManagerAdapter) CompactPreview(diffInterface interface{}) string {
+	if a.previewer == nil {
+		return ""
+	}
+
+	fileDiff, ok := diffInterface.(*diff.FileDiff)
+	if !ok {
+		return ""
+	}
+
+	return a.previewer.CompactPreview(fileDiff)
 }

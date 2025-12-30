@@ -20,6 +20,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
+	"github.com/johnpitter/ollama-code/internal/diff"
 )
 
 // Config representa a configuração da aplicação
@@ -273,4 +274,14 @@ func ProvideTodoManager(cfg *Config) *todos.Manager {
 	}
 
 	return todos.NewManagerWithStorage(storage)
+}
+
+// ProvideDiffer fornece diff manager
+func ProvideDiffer() *diff.Differ {
+	return diff.NewDiffer()
+}
+
+// ProvidePreviewer fornece preview manager
+func ProvidePreviewer() *diff.Previewer {
+	return diff.NewPreviewer()
 }

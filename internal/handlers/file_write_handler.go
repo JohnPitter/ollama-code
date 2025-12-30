@@ -60,10 +60,45 @@ func (h *FileWriteHandler) Handle(ctx context.Context, deps *Dependencies, resul
 	// Limpar content (remover markdown, etc)
 	content = h.codeCleaner.Clean(content, filePath)
 
+	// 📝 Criar TODO para tracking
+	var todoID string
+	if deps.TodoManager != nil {
+		id, err := deps.TodoManager.Add(
+			fmt.Sprintf("Escrevendo arquivo: %s", filePath),
+			fmt.Sprintf("Escrevendo %s", filePath),
+		)
+		if err == nil {
+			todoID = id
+		}
+	}
+
 	// Confirmar com usuário se necessário
 	if deps.Mode.RequiresConfirmation() {
 		preview := content
-		if len(preview) > 500 {
+
+		// 🎨 Se o arquivo existe e temos DiffManager, mostrar diff colorizado
+		if deps.DiffManager != nil && deps.PreviewManager != nil {
+			// Tentar ler arquivo existente
+			readParams := map[string]interface{}{
+				"file_path": filePath,
+			}
+			readResult, readErr := deps.ToolRegistry.Execute(ctx, "file_reader", readParams)
+
+			if readErr == nil && readResult.Success {
+				oldContent, ok := readResult.Data["content"].(string)
+				if ok && oldContent != "" {
+					// Computar diff
+					diffResult := deps.DiffManager.ComputeDiff(filePath, oldContent, content)
+					if diffResult != nil {
+						// Gerar preview colorizado
+						preview = deps.PreviewManager.Preview(diffResult)
+					}
+				}
+			}
+		}
+
+		// Fallback para preview simples
+		if len(preview) > 500 && !strings.Contains(preview, "📄 Arquivo:") {
 			preview = preview[:500] + "\n...(truncated)"
 		}
 
@@ -84,11 +119,24 @@ func (h *FileWriteHandler) Handle(ctx context.Context, deps *Dependencies, resul
 
 	toolResult, err := deps.ToolRegistry.Execute(ctx, "file_writer", params)
 	if err != nil {
+		// ❌ Marcar TODO como failed (se houver)
+		if todoID != "" && deps.TodoManager != nil {
+			deps.TodoManager.Delete(todoID)
+		}
 		return "", fmt.Errorf("erro ao escrever arquivo: %w", err)
 	}
 
 	if !toolResult.Success {
+		// ❌ Marcar TODO como failed
+		if todoID != "" && deps.TodoManager != nil {
+			deps.TodoManager.Delete(todoID)
+		}
 		return "", fmt.Errorf("erro: %s", toolResult.Error)
+	}
+
+	// ✅ Completar TODO
+	if todoID != "" && deps.TodoManager != nil {
+		deps.TodoManager.Complete(todoID)
 	}
 
 	// Adicionar aos arquivos recentes

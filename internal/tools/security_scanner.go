@@ -32,8 +32,13 @@ func (s *SecurityScanner) Description() string {
 	return "Escaneia código em busca de vulnerabilidades (CVE, SAST, secrets)"
 }
 
+// RequiresConfirmation indica se requer confirmação
+func (s *SecurityScanner) RequiresConfirmation() bool {
+	return false
+}
+
 // Execute executa scan de segurança
-func (s *SecurityScanner) Execute(ctx context.Context, params map[string]interface{}) Result {
+func (s *SecurityScanner) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	scanType, ok := params["type"].(string)
 	if !ok {
 		scanType = "all"
@@ -52,40 +57,40 @@ func (s *SecurityScanner) Execute(ctx context.Context, params map[string]interfa
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tipo de scan desconhecido: %s", scanType),
-		}
+		}, nil
 	}
 }
 
 // scanAll executa todos os tipos de scan
-func (s *SecurityScanner) scanAll() Result {
+func (s *SecurityScanner) scanAll() (Result, error) {
 	var output strings.Builder
 	output.WriteString("🔒 Scan de Segurança Completo\n\n")
 
 	// Secrets scan
 	output.WriteString("=== 1. Busca por Secrets ===\n")
-	secretsResult := s.scanSecrets()
+	secretsResult, _ := s.scanSecrets()
 	output.WriteString(secretsResult.Message)
 	output.WriteString("\n")
 
 	// SAST scan
 	output.WriteString("=== 2. SAST (Static Analysis) ===\n")
-	sastResult := s.scanSAST()
+	sastResult, _ := s.scanSAST()
 	output.WriteString(sastResult.Message)
 	output.WriteString("\n")
 
 	// Dependencies scan
 	output.WriteString("=== 3. Vulnerabilidades em Dependências ===\n")
-	depsResult := s.scanDependencies()
+	depsResult, _ := s.scanDependencies()
 	output.WriteString(depsResult.Message)
 
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // scanSecrets busca por secrets no código
-func (s *SecurityScanner) scanSecrets() Result {
+func (s *SecurityScanner) scanSecrets() (Result, error) {
 	var output strings.Builder
 	var findings []string
 
@@ -145,7 +150,7 @@ func (s *SecurityScanner) scanSecrets() Result {
 		return Result{
 			Success: false,
 			Error:   err.Error(),
-		}
+		}, nil
 	}
 
 	if len(findings) == 0 {
@@ -161,11 +166,11 @@ func (s *SecurityScanner) scanSecrets() Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // scanSAST executa análise estática de segurança
-func (s *SecurityScanner) scanSAST() Result {
+func (s *SecurityScanner) scanSAST() (Result, error) {
 	var output strings.Builder
 
 	projectType := detectProjectType(s.workDir)
@@ -220,11 +225,11 @@ func (s *SecurityScanner) scanSAST() Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // scanDependencies escaneia vulnerabilidades em dependências
-func (s *SecurityScanner) scanDependencies() Result {
+func (s *SecurityScanner) scanDependencies() (Result, error) {
 	var output strings.Builder
 
 	projectType := detectProjectType(s.workDir)
@@ -267,7 +272,7 @@ func (s *SecurityScanner) scanDependencies() Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // isTextFile verifica se extensão é de arquivo de texto

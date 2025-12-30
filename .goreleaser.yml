@@ -1,0 +1,105 @@
+project_name: ollama-code
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: ollama-code
+    binary: ollama-code
+    main: ./cmd/ollama-code
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - REFACTORING_FEATURES.md
+      - IMPROVEMENTS_SESSION.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance Improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: 'Refactors'
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: 'Other Changes'
+      order: 999
+
+release:
+  github:
+    owner: johnpitter
+    name: ollama-code
+  draft: false
+  prerelease: auto
+  mode: append
+  header: |
+    ## 🚀 Release {{ .Tag }}
+
+    **Full Changelog**: https://github.com/johnpitter/ollama-code/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+  footer: |
+    ## Installation
+
+    Download the appropriate binary for your platform from the assets below.
+
+    ### Linux/macOS
+    ```bash
+    tar -xzf ollama-code_{{ .Version }}_{{ .Os }}_{{ .Arch }}.tar.gz
+    chmod +x ollama-code
+    sudo mv ollama-code /usr/local/bin/
+    ```
+
+    ### Windows
+    Extract the zip file and add the `ollama-code.exe` to your PATH.
+
+    ---
+
+    **Generated with ❤️  by GoReleaser**

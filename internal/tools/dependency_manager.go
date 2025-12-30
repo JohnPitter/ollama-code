@@ -31,8 +31,13 @@ func (d *DependencyManager) Description() string {
 	return "Gerencia dependências do projeto (install, update, check vulnerabilities)"
 }
 
+// RequiresConfirmation indica se requer confirmação
+func (d *DependencyManager) RequiresConfirmation() bool {
+	return false
+}
+
 // Execute executa operação de gerenciamento de dependências
-func (d *DependencyManager) Execute(ctx context.Context, params map[string]interface{}) Result {
+func (d *DependencyManager) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	operation, ok := params["operation"].(string)
 	if !ok {
 		operation = "check"
@@ -55,7 +60,7 @@ func (d *DependencyManager) Execute(ctx context.Context, params map[string]inter
 			Success: false,
 			Message:  "",
 			Error:   fmt.Sprintf("Operação desconhecida: %s", operation),
-		}
+		}, nil
 	}
 }
 
@@ -88,7 +93,7 @@ func (d *DependencyManager) detectProjectType() string {
 }
 
 // checkDependencies lista dependências atuais
-func (d *DependencyManager) checkDependencies(projectType string) Result {
+func (d *DependencyManager) checkDependencies(projectType string) (Result, error) {
 	var cmd *exec.Cmd
 	var output strings.Builder
 
@@ -122,7 +127,7 @@ func (d *DependencyManager) checkDependencies(projectType string) Result {
 		cmd.Dir = d.workDir
 		result, err := cmd.CombinedOutput()
 		if err != nil {
-			return Result{Success: false, Error: err.Error()}
+			return Result{Success: false, Error: err.Error()}, nil
 		}
 		output.WriteString(string(result))
 
@@ -132,7 +137,7 @@ func (d *DependencyManager) checkDependencies(projectType string) Result {
 		cmd.Dir = d.workDir
 		result, err := cmd.CombinedOutput()
 		if err != nil {
-			return Result{Success: false, Error: err.Error()}
+			return Result{Success: false, Error: err.Error()}, nil
 		}
 		output.WriteString(string(result))
 
@@ -140,19 +145,19 @@ func (d *DependencyManager) checkDependencies(projectType string) Result {
 		return Result{
 			Success: false,
 			Error:   "Tipo de projeto não suportado ou não detectado",
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // installDependency instala nova dependência
-func (d *DependencyManager) installDependency(projectType, pkg string) Result {
+func (d *DependencyManager) installDependency(projectType, pkg string) (Result, error) {
 	if pkg == "" {
-		return Result{Success: false, Error: "Nome do pacote não especificado"}
+		return Result{Success: false, Error: "Nome do pacote não especificado"}, nil
 	}
 
 	var cmd *exec.Cmd
@@ -165,7 +170,7 @@ func (d *DependencyManager) installDependency(projectType, pkg string) Result {
 	case "python":
 		cmd = exec.Command("pip", "install", pkg)
 	default:
-		return Result{Success: false, Error: "Tipo de projeto não suportado"}
+		return Result{Success: false, Error: "Tipo de projeto não suportado"}, nil
 	}
 
 	cmd.Dir = d.workDir
@@ -176,17 +181,17 @@ func (d *DependencyManager) installDependency(projectType, pkg string) Result {
 			Success: false,
 			Message:  string(output),
 			Error:   err.Error(),
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  fmt.Sprintf("✅ Pacote '%s' instalado com sucesso\n\n%s", pkg, string(output)),
-	}
+	}, nil
 }
 
 // updateDependencies atualiza todas as dependências
-func (d *DependencyManager) updateDependencies(projectType string) Result {
+func (d *DependencyManager) updateDependencies(projectType string) (Result, error) {
 	var cmd *exec.Cmd
 
 	switch projectType {
@@ -197,7 +202,7 @@ func (d *DependencyManager) updateDependencies(projectType string) Result {
 	case "python":
 		cmd = exec.Command("pip", "install", "--upgrade", "-r", "requirements.txt")
 	default:
-		return Result{Success: false, Error: "Tipo de projeto não suportado"}
+		return Result{Success: false, Error: "Tipo de projeto não suportado"}, nil
 	}
 
 	cmd.Dir = d.workDir
@@ -208,17 +213,17 @@ func (d *DependencyManager) updateDependencies(projectType string) Result {
 			Success: false,
 			Message:  string(output),
 			Error:   err.Error(),
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  fmt.Sprintf("✅ Dependências atualizadas\n\n%s", string(output)),
-	}
+	}, nil
 }
 
 // auditSecurity verifica vulnerabilidades
-func (d *DependencyManager) auditSecurity(projectType string) Result {
+func (d *DependencyManager) auditSecurity(projectType string) (Result, error) {
 	var cmd *exec.Cmd
 	var output strings.Builder
 
@@ -257,13 +262,13 @@ func (d *DependencyManager) auditSecurity(projectType string) Result {
 		output.WriteString(string(result))
 
 	default:
-		return Result{Success: false, Error: "Tipo de projeto não suportado"}
+		return Result{Success: false, Error: "Tipo de projeto não suportado"}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // Schema retorna schema JSON da tool

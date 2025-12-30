@@ -19,6 +19,8 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 	cacheManager := ProvideCacheManager(cfg)
 	statusLine := ProvideStatusLine(cfg)
 	todoManager := ProvideTodoManager(cfg)
+	differ := ProvideDiffer()
+	previewer := ProvidePreviewer()
 
 	// Ollama context
 	ollamaContext, err := ProvideOllamaContext(cfg)
@@ -73,6 +75,8 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 		OllamaContext:   ollamaContext,
 		HandlerRegistry: handlerRegistry,
 		TodoManager:     todoManager,
+		Differ:          differ,
+		Previewer:       previewer,
 		Mode:            cfg.Mode,
 		WorkDir:         cfg.WorkDir,
 		History:         []llm.Message{},

@@ -24,6 +24,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
+	"github.com/johnpitter/ollama-code/internal/diff"
 )
 
 // Agent agente principal
@@ -42,6 +43,8 @@ type Agent struct {
 	HandlerRegistry *handlers.Registry
 	Observability   *observability.Observability
 	TodoManager     *todos.Manager
+	Differ          *diff.Differ
+	Previewer       *diff.Previewer
 	Mode            modes.OperationMode
 	WorkDir         string
 	History         []llm.Message
@@ -409,6 +412,8 @@ func (a *Agent) buildDependencies() *handlers.Dependencies {
 		SessionManager:  handlers.NewSessionManagerAdapter(a.SessionManager),
 		CacheManager:    handlers.NewCacheManagerAdapter(a.Cache),
 		TodoManager:     handlers.NewTodoManagerAdapter(a.TodoManager),
+		DiffManager:     handlers.NewDiffManagerAdapter(a.Differ),
+		PreviewManager:  handlers.NewPreviewManagerAdapter(a.Previewer),
 		LLMClient:       handlers.NewLLMClientAdapter(a.LLMClient),
 		WebSearch:       handlers.NewWebSearchClientAdapter(a.WebSearch),
 		IntentDetector:  handlers.NewIntentDetectorAdapter(a.IntentDetector),

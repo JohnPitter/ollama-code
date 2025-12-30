@@ -25,6 +25,8 @@ type Dependencies struct {
 	SessionManager  SessionManager
 	CacheManager    CacheManager
 	TodoManager     TodoManager
+	DiffManager     DiffManager
+	PreviewManager  PreviewManager
 
 	// Clients
 	LLMClient      LLMClient
@@ -81,6 +83,20 @@ type TodoManager interface {
 	Clear() error
 	Delete(id string) error
 	Count() int
+}
+
+type DiffManager interface {
+	ComputeDiff(filePath, oldContent, newContent string) interface{}
+	ApplyEdit(filePath, content string, editRange interface{}) (string, interface{}, error)
+	Rollback(filePath string) (string, error)
+	GetHistory(filePath string) interface{}
+	ClearHistory()
+}
+
+type PreviewManager interface {
+	Preview(diff interface{}) string
+	PreviewRange(filePath, oldContent string, editRange interface{}) string
+	CompactPreview(diff interface{}) string
 }
 
 type LLMClient interface {

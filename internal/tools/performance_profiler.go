@@ -32,8 +32,13 @@ func (p *PerformanceProfiler) Description() string {
 	return "Analisa performance do código (CPU, memória, benchmarks)"
 }
 
+// RequiresConfirmation indica se requer confirmação
+func (p *PerformanceProfiler) RequiresConfirmation() bool {
+	return false
+}
+
 // Execute executa profiling
-func (p *PerformanceProfiler) Execute(ctx context.Context, params map[string]interface{}) Result {
+func (p *PerformanceProfiler) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	profileType, ok := params["type"].(string)
 	if !ok {
 		profileType = "benchmark"
@@ -54,12 +59,12 @@ func (p *PerformanceProfiler) Execute(ctx context.Context, params map[string]int
 		return Result{
 			Success: false,
 			Error:   fmt.Sprintf("Tipo de profile desconhecido: %s", profileType),
-		}
+		}, nil
 	}
 }
 
 // runBenchmark executa benchmarks
-func (p *PerformanceProfiler) runBenchmark(params map[string]interface{}) Result {
+func (p *PerformanceProfiler) runBenchmark(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("⚡ Executando Benchmarks\n\n")
 
@@ -82,7 +87,7 @@ func (p *PerformanceProfiler) runBenchmark(params map[string]interface{}) Result
 				Success: false,
 				Message:  string(result),
 				Error:   err.Error(),
-			}
+			}, nil
 		}
 
 		output.WriteString(string(result))
@@ -112,17 +117,17 @@ func (p *PerformanceProfiler) runBenchmark(params map[string]interface{}) Result
 		return Result{
 			Success: false,
 			Error:   "Tipo de projeto não suportado para benchmarks",
-		}
+		}, nil
 	}
 
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // profileCPU executa CPU profiling
-func (p *PerformanceProfiler) profileCPU(params map[string]interface{}) Result {
+func (p *PerformanceProfiler) profileCPU(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("🔥 CPU Profiling\n\n")
 
@@ -173,11 +178,11 @@ func (p *PerformanceProfiler) profileCPU(params map[string]interface{}) Result {
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // profileMemory executa memory profiling
-func (p *PerformanceProfiler) profileMemory(params map[string]interface{}) Result {
+func (p *PerformanceProfiler) profileMemory(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("💾 Memory Profiling\n\n")
 
@@ -227,11 +232,11 @@ func (p *PerformanceProfiler) profileMemory(params map[string]interface{}) Resul
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // traceExecution executa execution tracing
-func (p *PerformanceProfiler) traceExecution(params map[string]interface{}) Result {
+func (p *PerformanceProfiler) traceExecution(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("🔍 Execution Tracing\n\n")
 
@@ -264,11 +269,11 @@ func (p *PerformanceProfiler) traceExecution(params map[string]interface{}) Resu
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // analyzeProfile analisa profile existente
-func (p *PerformanceProfiler) analyzeProfile(params map[string]interface{}) Result {
+func (p *PerformanceProfiler) analyzeProfile(params map[string]interface{}) (Result, error) {
 	var output strings.Builder
 	output.WriteString("📊 Análise de Performance\n\n")
 
@@ -303,7 +308,7 @@ func (p *PerformanceProfiler) analyzeProfile(params map[string]interface{}) Resu
 	return Result{
 		Success: true,
 		Message:  output.String(),
-	}
+	}, nil
 }
 
 // detectProjectType detecta tipo de projeto

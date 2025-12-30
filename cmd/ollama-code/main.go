@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -185,7 +186,12 @@ func runChat(cmd *cobra.Command, args []string) {
 
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading input: %v\n", err)
+			// EOF (Ctrl+D ou Ctrl+C) - sair elegantemente
+			if err == io.EOF || strings.Contains(err.Error(), "EOF") {
+				blue.Println("\n\n👋 Até logo!")
+				return
+			}
+			fmt.Fprintf(os.Stderr, "\nErro ao ler entrada: %v\n", err)
 			break
 		}
 
