@@ -22,6 +22,10 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 	differ := ProvideDiffer()
 	previewer := ProvidePreviewer()
 
+	// Subagent System
+	subagentExecutor := ProvideSubagentExecutor(cfg)
+	subagentManager := ProvideSubagentManager(subagentExecutor)
+
 	// Ollama context
 	ollamaContext, err := ProvideOllamaContext(cfg)
 	if err != nil {
@@ -77,6 +81,7 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 		TodoManager:     todoManager,
 		Differ:          differ,
 		Previewer:       previewer,
+		SubagentManager: subagentManager,
 		Mode:            cfg.Mode,
 		WorkDir:         cfg.WorkDir,
 		History:         []llm.Message{},

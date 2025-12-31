@@ -21,6 +21,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
 	"github.com/johnpitter/ollama-code/internal/statusline"
+	"github.com/johnpitter/ollama-code/internal/subagent"
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
@@ -45,6 +46,7 @@ type Agent struct {
 	TodoManager     *todos.Manager
 	Differ          *diff.Differ
 	Previewer       *diff.Previewer
+	SubagentManager *subagent.Manager
 	Mode            modes.OperationMode
 	WorkDir         string
 	History         []llm.Message

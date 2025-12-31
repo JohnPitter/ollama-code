@@ -8,6 +8,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/cache"
 	"github.com/johnpitter/ollama-code/internal/commands"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
+	"github.com/johnpitter/ollama-code/internal/diff"
 	"github.com/johnpitter/ollama-code/internal/handlers"
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
@@ -17,10 +18,10 @@ import (
 	"github.com/johnpitter/ollama-code/internal/session"
 	"github.com/johnpitter/ollama-code/internal/skills"
 	"github.com/johnpitter/ollama-code/internal/statusline"
+	"github.com/johnpitter/ollama-code/internal/subagent"
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
-	"github.com/johnpitter/ollama-code/internal/diff"
 )
 
 // Config representa a configuração da aplicação
@@ -284,4 +285,16 @@ func ProvideDiffer() *diff.Differ {
 // ProvidePreviewer fornece preview manager
 func ProvidePreviewer() *diff.Previewer {
 	return diff.NewPreviewer()
+}
+
+// ProvideSubagentExecutor fornece executor de subagents
+func ProvideSubagentExecutor(cfg *Config) *subagent.Executor {
+	return subagent.NewExecutor(cfg.OllamaURL)
+}
+
+// ProvideSubagentManager fornece manager de subagents
+func ProvideSubagentManager(executor *subagent.Executor) *subagent.Manager {
+	// Criar ExecutorFunc a partir do Executor
+	executorFunc := executor.CreateExecutorFunc()
+	return subagent.NewManager(executorFunc)
 }
