@@ -5,7 +5,7 @@
 # NOT as 'web_search' or other intents
 #
 
-set -e
+set +e  # Don't exit on test failures - we want to run all tests
 
 # Colors
 GREEN='\033[0;32m'
@@ -13,7 +13,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-OLLAMA_CODE="../../../build/ollama-code.exe"
+OLLAMA_CODE="../../build/ollama-code.exe"
 TEST_NAME="Conversation Flow - Greetings"
 PASSED=0
 FAILED=0
@@ -33,7 +33,7 @@ test_message() {
     echo -n "[$test_id] $description... "
 
     # Execute command and capture output
-    output=$(echo "$message" | timeout 30s $OLLAMA_CODE ask --mode autonomous 2>&1 || true)
+    output=$(timeout 30s $OLLAMA_CODE ask "$message" --mode autonomous 2>&1 || true)
 
     # Check if expected intent was detected
     if echo "$output" | grep -q "Intenção: $expected_intent"; then

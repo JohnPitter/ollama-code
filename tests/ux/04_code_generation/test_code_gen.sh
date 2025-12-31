@@ -4,13 +4,13 @@
 # Tests code generation across different languages and frameworks
 #
 
-set -e
+set +e  # Don't exit on test failures
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-OLLAMA_CODE="../../../build/ollama-code.exe"
+OLLAMA_CODE="../../build/ollama-code.exe"
 TEST_DIR="/tmp/ollama_codegen_test_$$"
 PASSED=0
 FAILED=0
@@ -31,7 +31,7 @@ test_code_gen() {
 
     echo -n "[$test_id] $description... "
 
-    output=$(echo "$message" | timeout 45s $OLLAMA_CODE ask --mode autonomous 2>&1 || true)
+    output=$(timeout 45s $OLLAMA_CODE ask "$message" --mode autonomous 2>&1 || true)
 
     # Check if code was generated and contains expected pattern
     if echo "$output" | grep -q "Arquivo criado" && find . -type f -name "$pattern" | head -1 | xargs cat | grep -q "."; then

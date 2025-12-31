@@ -4,14 +4,14 @@
 # Tests that all 8 intent types are correctly detected
 #
 
-set -e
+set +e  # Don't exit on test failures
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-OLLAMA_CODE="../../../build/ollama-code.exe"
+OLLAMA_CODE="../../build/ollama-code.exe"
 TEST_NAME="Intent Detection - All Types"
 PASSED=0
 FAILED=0
@@ -29,7 +29,7 @@ test_intent() {
 
     echo -n "[$test_id] $description... "
 
-    output=$(echo "$message" | timeout 30s $OLLAMA_CODE ask --mode autonomous 2>&1 || true)
+    output=$(timeout 30s $OLLAMA_CODE ask "$message" --mode autonomous 2>&1 || true)
 
     if echo "$output" | grep -q "Intenção: $expected_intent"; then
         echo -e "${GREEN}PASS${NC}"

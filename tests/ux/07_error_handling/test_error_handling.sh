@@ -4,13 +4,13 @@
 # Tests graceful error handling and user-friendly error messages
 #
 
-set -e
+set +e  # Don't exit on test failures
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-OLLAMA_CODE="../../../build/ollama-code.exe"
+OLLAMA_CODE="../../build/ollama-code.exe"
 PASSED=0
 FAILED=0
 
@@ -27,7 +27,7 @@ test_error() {
 
     echo -n "[$test_id] $description... "
 
-    output=$(echo "$message" | timeout 30s $OLLAMA_CODE ask --mode autonomous 2>&1 || true)
+    output=$(timeout 30s $OLLAMA_CODE ask "$message" --mode autonomous 2>&1 || true)
 
     # Check if error is handled gracefully (no crash, user-friendly message)
     if echo "$output" | grep -qi "$should_contain" && ! echo "$output" | grep -q "panic\\|fatal"; then

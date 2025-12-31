@@ -4,7 +4,7 @@
 # Runs all UX tests and generates consolidated report
 #
 
-set -e
+set +e  # Don't exit on test failures - we want to run all suites
 
 # Colors
 GREEN='\033[0;32m'
