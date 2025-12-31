@@ -58,7 +58,7 @@ func (d *DependencyManager) Execute(ctx context.Context, params map[string]inter
 	default:
 		return Result{
 			Success: false,
-			Message:  "",
+			Message: "",
 			Error:   fmt.Sprintf("Operação desconhecida: %s", operation),
 		}, nil
 	}
@@ -150,7 +150,7 @@ func (d *DependencyManager) checkDependencies(projectType string) (Result, error
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -179,14 +179,14 @@ func (d *DependencyManager) installDependency(projectType, pkg string) (Result, 
 	if err != nil {
 		return Result{
 			Success: false,
-			Message:  string(output),
+			Message: string(output),
 			Error:   err.Error(),
 		}, nil
 	}
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ Pacote '%s' instalado com sucesso\n\n%s", pkg, string(output)),
+		Message: fmt.Sprintf("✅ Pacote '%s' instalado com sucesso\n\n%s", pkg, string(output)),
 	}, nil
 }
 
@@ -211,14 +211,14 @@ func (d *DependencyManager) updateDependencies(projectType string) (Result, erro
 	if err != nil {
 		return Result{
 			Success: false,
-			Message:  string(output),
+			Message: string(output),
 			Error:   err.Error(),
 		}, nil
 	}
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ Dependências atualizadas\n\n%s", string(output)),
+		Message: fmt.Sprintf("✅ Dependências atualizadas\n\n%s", string(output)),
 	}, nil
 }
 
@@ -267,7 +267,7 @@ func (d *DependencyManager) auditSecurity(projectType string) (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 

@@ -134,7 +134,7 @@ func (a *AdvancedRefactoring) renameSymbol(params map[string]interface{}) (Resul
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -281,7 +281,7 @@ func (a *AdvancedRefactoring) extractMethod(params map[string]interface{}) (Resu
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ Método '%s' extraído com sucesso em %s\n", methodName, filePath),
+		Message: fmt.Sprintf("✅ Método '%s' extraído com sucesso em %s\n", methodName, filePath),
 	}, nil
 }
 
@@ -354,13 +354,13 @@ func (a *AdvancedRefactoring) extractClass(params map[string]interface{}) (Resul
 
 		return Result{
 			Success: true,
-			Message:  output.String(),
+			Message: output.String(),
 		}, nil
 	}
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("💡 Extract Class suportado para arquivos .go. Arquivo: %s\n", sourceFile),
+		Message: fmt.Sprintf("💡 Extract Class suportado para arquivos .go. Arquivo: %s\n", sourceFile),
 	}, nil
 }
 
@@ -394,7 +394,7 @@ func (a *AdvancedRefactoring) inlineSymbol(params map[string]interface{}) (Resul
 		// Find the function definition
 		for i, line := range lines {
 			if strings.Contains(line, fmt.Sprintf("func %s(", symbolName)) ||
-			   strings.Contains(line, fmt.Sprintf("func %s (", symbolName)) {
+				strings.Contains(line, fmt.Sprintf("func %s (", symbolName)) {
 				funcStart = i
 				inFunction = true
 				braceCount = strings.Count(line, "{") - strings.Count(line, "}")
@@ -478,7 +478,7 @@ func (a *AdvancedRefactoring) inlineSymbol(params map[string]interface{}) (Resul
 
 		return Result{
 			Success: true,
-			Message:  fmt.Sprintf("✅ Função '%s' inline executado com sucesso (%d chamadas substituídas)\n", symbolName, replacements),
+			Message: fmt.Sprintf("✅ Função '%s' inline executado com sucesso (%d chamadas substituídas)\n", symbolName, replacements),
 		}, nil
 	}
 
@@ -525,9 +525,9 @@ func (a *AdvancedRefactoring) moveToFile(params map[string]interface{}) (Result,
 			// Check for function, type, const, or var
 			if !inSymbol {
 				if strings.Contains(line, fmt.Sprintf("func %s", symbolName)) ||
-				   strings.Contains(line, fmt.Sprintf("type %s ", symbolName)) ||
-				   strings.Contains(line, fmt.Sprintf("const %s ", symbolName)) ||
-				   strings.Contains(line, fmt.Sprintf("var %s ", symbolName)) {
+					strings.Contains(line, fmt.Sprintf("type %s ", symbolName)) ||
+					strings.Contains(line, fmt.Sprintf("const %s ", symbolName)) ||
+					strings.Contains(line, fmt.Sprintf("var %s ", symbolName)) {
 					symbolStart = i
 					inSymbol = true
 					found = true
@@ -668,7 +668,7 @@ func (a *AdvancedRefactoring) moveToFile(params map[string]interface{}) (Result,
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ Símbolo '%s' movido de %s para %s\n", symbolName, sourceFile, targetFile),
+		Message: fmt.Sprintf("✅ Símbolo '%s' movido de %s para %s\n", symbolName, sourceFile, targetFile),
 	}, nil
 }
 
@@ -737,7 +737,7 @@ func (a *AdvancedRefactoring) findDuplicates() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 

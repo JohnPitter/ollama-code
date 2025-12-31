@@ -85,7 +85,7 @@ func (s *SecurityScanner) scanAll() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -96,13 +96,13 @@ func (s *SecurityScanner) scanSecrets() (Result, error) {
 
 	// Padrões comuns de secrets
 	patterns := map[string]*regexp.Regexp{
-		"API Key":           regexp.MustCompile(`(?i)(api[_-]?key|apikey)\s*[:=]\s*['"]?([a-zA-Z0-9_\-]{20,})['"]?`),
-		"AWS Access Key":    regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
-		"Password":          regexp.MustCompile(`(?i)(password|passwd|pwd)\s*[:=]\s*['"]([^'"\s]{8,})['"]`),
-		"Private Key":       regexp.MustCompile(`-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----`),
-		"JWT Token":         regexp.MustCompile(`eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+`),
-		"GitHub Token":      regexp.MustCompile(`ghp_[a-zA-Z0-9]{36}`),
-		"Generic Secret":    regexp.MustCompile(`(?i)(secret|token)\s*[:=]\s*['"]?([a-zA-Z0-9_\-]{20,})['"]?`),
+		"API Key":        regexp.MustCompile(`(?i)(api[_-]?key|apikey)\s*[:=]\s*['"]?([a-zA-Z0-9_\-]{20,})['"]?`),
+		"AWS Access Key": regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
+		"Password":       regexp.MustCompile(`(?i)(password|passwd|pwd)\s*[:=]\s*['"]([^'"\s]{8,})['"]`),
+		"Private Key":    regexp.MustCompile(`-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----`),
+		"JWT Token":      regexp.MustCompile(`eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+`),
+		"GitHub Token":   regexp.MustCompile(`ghp_[a-zA-Z0-9]{36}`),
+		"Generic Secret": regexp.MustCompile(`(?i)(secret|token)\s*[:=]\s*['"]?([a-zA-Z0-9_\-]{20,})['"]?`),
 	}
 
 	// Scan files
@@ -165,7 +165,7 @@ func (s *SecurityScanner) scanSecrets() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -224,7 +224,7 @@ func (s *SecurityScanner) scanSAST() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -271,7 +271,7 @@ func (s *SecurityScanner) scanDependencies() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 

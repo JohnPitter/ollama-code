@@ -39,11 +39,11 @@ type Task struct {
 	CompletedAt time.Time
 
 	// Output streaming
-	stdout      *bytes.Buffer
-	stderr      *bytes.Buffer
-	stdoutRead  int // Bytes já lidos do stdout
-	stderrRead  int // Bytes já lidos do stderr
-	outputMu    sync.RWMutex
+	stdout     *bytes.Buffer
+	stderr     *bytes.Buffer
+	stdoutRead int // Bytes já lidos do stdout
+	stderrRead int // Bytes já lidos do stderr
+	outputMu   sync.RWMutex
 
 	// Process control
 	done chan struct{}

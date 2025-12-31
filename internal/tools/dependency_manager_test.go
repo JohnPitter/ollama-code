@@ -135,7 +135,6 @@ func TestDependencyManager_Execute_InvalidOperation(t *testing.T) {
 
 	result, _ := dm.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for invalid operation")
 	}
@@ -162,7 +161,6 @@ func TestDependencyManager_Execute_Check_UnknownProject(t *testing.T) {
 
 	result, _ := dm.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for unknown project type")
 	}
@@ -178,7 +176,6 @@ func TestDependencyManager_Execute_Install_MissingPackage(t *testing.T) {
 	}
 
 	result, _ := dm.Execute(ctx, params)
-
 
 	if result.Success {
 		t.Error("Result should not be successful when package is missing")
@@ -201,7 +198,6 @@ func TestDependencyManager_Execute_DefaultOperation(t *testing.T) {
 
 	result, _ := dm.Execute(ctx, params)
 
-
 	// Should attempt to check (will fail for unknown project, but shouldn't panic)
 	if result.Success {
 		t.Log("Check succeeded (unexpected but ok)")
@@ -223,7 +219,6 @@ func TestDependencyManager_Execute_Update_UnknownProject(t *testing.T) {
 
 	result, _ := dm.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for unknown project")
 	}
@@ -241,7 +236,6 @@ func TestDependencyManager_Execute_Audit_UnknownProject(t *testing.T) {
 	}
 
 	result, _ := dm.Execute(ctx, params)
-
 
 	if result.Success {
 		t.Error("Result should not be successful for unknown project")

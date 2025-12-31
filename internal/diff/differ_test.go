@@ -92,9 +92,9 @@ func TestDiffer_ComputeDiff(t *testing.T) {
 	differ := NewDiffer()
 
 	tests := []struct {
-		name           string
-		oldContent     string
-		newContent     string
+		name            string
+		oldContent      string
+		newContent      string
 		expectedChanges int
 	}{
 		{

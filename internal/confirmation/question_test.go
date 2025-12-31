@@ -6,9 +6,9 @@ import (
 
 func TestQuestion_Validate(t *testing.T) {
 	tests := []struct {
-		name    string
+		name     string
 		question Question
-		wantErr error
+		wantErr  error
 	}{
 		{
 			name: "valid question",

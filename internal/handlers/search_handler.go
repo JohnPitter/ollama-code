@@ -123,7 +123,7 @@ func extractQueryFromMessage(message string) string {
 
 	// Padrões comuns de busca com captura do termo
 	patterns := []struct {
-		prefix string
+		prefix  string
 		extract func(string, string) string
 	}{
 		// Português
@@ -175,7 +175,7 @@ func extractQueryFromMessage(message string) string {
 		if len(words) > 1 {
 			// Se primeira palavra é um verbo de busca, pegar resto
 			searchVerbs := []string{"busca", "buscar", "procure", "procurar", "encontre", "encontrar",
-				                     "acha", "achar", "search", "find", "locate", "look"}
+				"acha", "achar", "search", "find", "locate", "look"}
 			for _, verb := range searchVerbs {
 				if words[0] == verb || words[0] == verb+"r" {
 					query = strings.Join(words[1:], " ")

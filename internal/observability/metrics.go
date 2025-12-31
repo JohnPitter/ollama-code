@@ -30,17 +30,17 @@ type MetricsCollector struct {
 	metrics map[string]*Metric
 
 	// Histograms específicos
-	handlerDurations  map[string][]float64
-	toolDurations     map[string][]float64
-	llmDurations      []float64
-	intentDurations   []float64
+	handlerDurations map[string][]float64
+	toolDurations    map[string][]float64
+	llmDurations     []float64
+	intentDurations  []float64
 
 	// Contadores
-	handlerCounts     map[string]int64
-	handlerErrors     map[string]int64
-	toolCounts        map[string]int64
-	cacheHits         int64
-	cacheMisses       int64
+	handlerCounts map[string]int64
+	handlerErrors map[string]int64
+	toolCounts    map[string]int64
+	cacheHits     int64
+	cacheMisses   int64
 }
 
 // NewMetricsCollector cria novo coletor de métricas

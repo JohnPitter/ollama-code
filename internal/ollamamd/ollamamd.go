@@ -36,21 +36,21 @@ func (l Level) String() string {
 
 // OllamaFile representa um arquivo OLLAMA.md
 type OllamaFile struct {
-	Path       string    // Caminho completo do arquivo
-	Level      Level     // Nível hierárquico
-	Content    string    // Conteúdo do arquivo
-	Language   string    // Linguagem (se Level == LevelLanguage)
-	LoadedAt   time.Time // Timestamp de quando foi carregado
-	Sections   map[string]string // Seções do arquivo (título -> conteúdo)
+	Path     string            // Caminho completo do arquivo
+	Level    Level             // Nível hierárquico
+	Content  string            // Conteúdo do arquivo
+	Language string            // Linguagem (se Level == LevelLanguage)
+	LoadedAt time.Time         // Timestamp de quando foi carregado
+	Sections map[string]string // Seções do arquivo (título -> conteúdo)
 }
 
 // OllamaContext contexto mesclado de múltiplos arquivos OLLAMA.md
 type OllamaContext struct {
-	Files       []*OllamaFile // Arquivos carregados (ordenados por prioridade)
-	Merged      string        // Conteúdo mesclado
-	Guidelines  []string      // Diretrizes extraídas
+	Files       []*OllamaFile     // Arquivos carregados (ordenados por prioridade)
+	Merged      string            // Conteúdo mesclado
+	Guidelines  []string          // Diretrizes extraídas
 	Preferences map[string]string // Preferências extraídas
-	LoadedAt    time.Time     // Timestamp da última atualização
+	LoadedAt    time.Time         // Timestamp da última atualização
 }
 
 // NewOllamaFile cria novo OllamaFile

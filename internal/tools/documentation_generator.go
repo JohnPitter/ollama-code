@@ -99,7 +99,7 @@ func (d *DocumentationGenerator) generateAuto() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -129,7 +129,7 @@ func (d *DocumentationGenerator) generateGoDoc(target string) (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -156,7 +156,7 @@ func (d *DocumentationGenerator) generateJSDoc(target string) (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -203,7 +203,7 @@ func (d *DocumentationGenerator) generateReadme() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ README.md criado em: %s\n", readmePath),
+		Message: fmt.Sprintf("✅ README.md criado em: %s\n", readmePath),
 	}, nil
 }
 
@@ -239,7 +239,7 @@ func (d *DocumentationGenerator) generateAPIDoc() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 

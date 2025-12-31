@@ -69,7 +69,6 @@ func TestAdvancedRefactoring_Execute_InvalidType(t *testing.T) {
 
 	result, _ := ar.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for invalid type")
 	}
@@ -86,7 +85,6 @@ func TestAdvancedRefactoring_Execute_MissingType(t *testing.T) {
 	params := map[string]interface{}{}
 
 	result, _ := ar.Execute(ctx, params)
-
 
 	if result.Success {
 		t.Error("Result should not be successful when type is missing")
@@ -128,7 +126,6 @@ func main() {
 
 	result, _ := ar.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -157,7 +154,6 @@ func TestAdvancedRefactoring_RenameSymbol_MissingParams(t *testing.T) {
 	}
 
 	result, _ := ar.Execute(ctx, params)
-
 
 	if result.Success {
 		t.Error("Result should not be successful when parameters are missing")
@@ -199,7 +195,6 @@ func TestAdvancedRefactoring_FindDuplicates(t *testing.T) {
 	}
 
 	result, _ := ar.Execute(ctx, params)
-
 
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)

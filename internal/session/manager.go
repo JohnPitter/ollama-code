@@ -263,9 +263,9 @@ func (m *Manager) GetStats() (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"total_sessions":   len(sessions),
-		"active_sessions":  activeCount,
-		"total_messages":   totalMessages,
-		"current_session":  m.currentSession != nil,
+		"total_sessions":  len(sessions),
+		"active_sessions": activeCount,
+		"total_messages":  totalMessages,
+		"current_session": m.currentSession != nil,
 	}, nil
 }

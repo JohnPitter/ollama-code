@@ -12,6 +12,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/cache"
 	"github.com/johnpitter/ollama-code/internal/commands"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
+	"github.com/johnpitter/ollama-code/internal/diff"
 	"github.com/johnpitter/ollama-code/internal/handlers"
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
@@ -26,34 +27,33 @@ import (
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
-	"github.com/johnpitter/ollama-code/internal/diff"
 )
 
 // Agent agente principal
 type Agent struct {
-	LLMClient       *llm.Client
-	IntentDetector  *intent.Detector
-	ToolRegistry    *tools.Registry
-	CommandRegistry *commands.Registry
-	SkillRegistry   *skills.Registry
-	ConfirmManager  *confirmation.Manager
-	WebSearch       *websearch.Orchestrator
-	SessionManager  *session.Manager
-	Cache           *cache.Manager
-	StatusLine      *statusline.StatusLine
-	OllamaContext   *ollamamd.OllamaContext
-	HandlerRegistry *handlers.Registry
-	Observability   *observability.Observability
-	TodoManager     *todos.Manager
-	Differ          *diff.Differ
-	Previewer       *diff.Previewer
-	SubagentManager *subagent.Manager
+	LLMClient        *llm.Client
+	IntentDetector   *intent.Detector
+	ToolRegistry     *tools.Registry
+	CommandRegistry  *commands.Registry
+	SkillRegistry    *skills.Registry
+	ConfirmManager   *confirmation.Manager
+	WebSearch        *websearch.Orchestrator
+	SessionManager   *session.Manager
+	Cache            *cache.Manager
+	StatusLine       *statusline.StatusLine
+	OllamaContext    *ollamamd.OllamaContext
+	HandlerRegistry  *handlers.Registry
+	Observability    *observability.Observability
+	TodoManager      *todos.Manager
+	Differ           *diff.Differ
+	Previewer        *diff.Previewer
+	SubagentManager  *subagent.Manager
 	MultiModelRouter *multimodel.Router
-	Mode            modes.OperationMode
-	WorkDir         string
-	History         []llm.Message
-	RecentFiles     []string // Arquivos criados/modificados recentemente
-	Mu              sync.Mutex
+	Mode             modes.OperationMode
+	WorkDir          string
+	History          []llm.Message
+	RecentFiles      []string // Arquivos criados/modificados recentemente
+	Mu               sync.Mutex
 
 	// Colors
 	ColorGreen  *color.Color

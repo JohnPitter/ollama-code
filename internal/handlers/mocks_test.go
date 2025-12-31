@@ -128,9 +128,9 @@ func (m *MockCacheManager) Set(key string, value interface{}) {
 
 // MockLLMClient mock para LLMClient
 type MockLLMClient struct {
-	CompleteFunc          func(ctx context.Context, prompt string) (string, error)
+	CompleteFunc            func(ctx context.Context, prompt string) (string, error)
 	CompleteWithHistoryFunc func(ctx context.Context, messages []Message) (string, error)
-	CompleteStreamingFunc func(ctx context.Context, messages []Message, opts interface{}, callback func(string)) (string, error)
+	CompleteStreamingFunc   func(ctx context.Context, messages []Message, opts interface{}, callback func(string)) (string, error)
 }
 
 func (m *MockLLMClient) Complete(ctx context.Context, prompt string) (string, error) {

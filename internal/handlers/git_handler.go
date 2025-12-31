@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
+	"github.com/johnpitter/ollama-code/internal/intent"
 )
 
 // GitHandler processa operações Git

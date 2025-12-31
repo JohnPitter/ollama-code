@@ -85,7 +85,7 @@ func (p *PerformanceProfiler) runBenchmark(params map[string]interface{}) (Resul
 		if err != nil {
 			return Result{
 				Success: false,
-				Message:  string(result),
+				Message: string(result),
 				Error:   err.Error(),
 			}, nil
 		}
@@ -122,7 +122,7 @@ func (p *PerformanceProfiler) runBenchmark(params map[string]interface{}) (Resul
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -177,7 +177,7 @@ func (p *PerformanceProfiler) profileCPU(params map[string]interface{}) (Result,
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -231,7 +231,7 @@ func (p *PerformanceProfiler) profileMemory(params map[string]interface{}) (Resu
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -268,7 +268,7 @@ func (p *PerformanceProfiler) traceExecution(params map[string]interface{}) (Res
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -307,7 +307,7 @@ func (p *PerformanceProfiler) analyzeProfile(params map[string]interface{}) (Res
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 

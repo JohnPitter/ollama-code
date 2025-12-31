@@ -65,7 +65,6 @@ func TestDocumentationGenerator_Execute_InvalidType(t *testing.T) {
 
 	result, _ := dg.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for invalid type")
 	}
@@ -87,7 +86,6 @@ func TestDocumentationGenerator_Execute_GenerateReadme(t *testing.T) {
 	}
 
 	result, _ := dg.Execute(ctx, params)
-
 
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
@@ -132,7 +130,6 @@ func TestDocumentationGenerator_Execute_Auto_GoProject(t *testing.T) {
 
 	result, _ := dg.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -162,7 +159,6 @@ func TestDocumentationGenerator_Execute_Auto_NodeProject(t *testing.T) {
 
 	result, _ := dg.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -183,7 +179,6 @@ func TestDocumentationGenerator_Execute_APIDoc(t *testing.T) {
 
 	result, _ := dg.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -202,7 +197,6 @@ func TestDocumentationGenerator_Execute_DefaultType(t *testing.T) {
 	params := map[string]interface{}{}
 
 	result, _ := dg.Execute(ctx, params)
-
 
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)

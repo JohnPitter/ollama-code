@@ -210,7 +210,7 @@ func (f *ContentFetcher) FetchMultiple(ctx context.Context, urls []string, maxCo
 	// Lançar goroutines para fetch paralelo
 	for i, url := range urls {
 		go func(idx int, u string) {
-			semaphore <- struct{}{} // Adquirir semaphore
+			semaphore <- struct{}{}        // Adquirir semaphore
 			defer func() { <-semaphore }() // Liberar semaphore
 
 			content := f.FetchContent(ctx, u)

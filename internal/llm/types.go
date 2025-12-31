@@ -32,7 +32,7 @@ type Response struct {
 
 // CompletionOptions opções para completar
 type CompletionOptions struct {
-	Temperature float64
-	MaxTokens   int
+	Temperature  float64
+	MaxTokens    int
 	SystemPrompt string
 }

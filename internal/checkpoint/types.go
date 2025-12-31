@@ -8,14 +8,14 @@ import (
 
 // Checkpoint representa um checkpoint do estado
 type Checkpoint struct {
-	ID              string                 `json:"id"`
-	Timestamp       time.Time              `json:"timestamp"`
-	Conversation    []llm.Message          `json:"conversation"`
-	FileStates      map[string]FileState   `json:"file_states"`
-	WorkspaceState  WorkspaceState         `json:"workspace_state"`
-	Description     string                 `json:"description"`
-	AutoCreated     bool                   `json:"auto_created"`
-	Tags            []string               `json:"tags,omitempty"`
+	ID             string               `json:"id"`
+	Timestamp      time.Time            `json:"timestamp"`
+	Conversation   []llm.Message        `json:"conversation"`
+	FileStates     map[string]FileState `json:"file_states"`
+	WorkspaceState WorkspaceState       `json:"workspace_state"`
+	Description    string               `json:"description"`
+	AutoCreated    bool                 `json:"auto_created"`
+	Tags           []string             `json:"tags,omitempty"`
 }
 
 // FileState estado de um arquivo
@@ -29,11 +29,11 @@ type FileState struct {
 
 // WorkspaceState estado do workspace
 type WorkspaceState struct {
-	WorkingDir   string            `json:"working_dir"`
-	GitBranch    string            `json:"git_branch,omitempty"`
-	GitCommit    string            `json:"git_commit,omitempty"`
-	Environment  map[string]string `json:"environment,omitempty"`
-	OpenFiles    []string          `json:"open_files,omitempty"`
+	WorkingDir  string            `json:"working_dir"`
+	GitBranch   string            `json:"git_branch,omitempty"`
+	GitCommit   string            `json:"git_commit,omitempty"`
+	Environment map[string]string `json:"environment,omitempty"`
+	OpenFiles   []string          `json:"open_files,omitempty"`
 }
 
 // CheckpointList lista de checkpoints

@@ -27,20 +27,20 @@ import (
 
 // Config representa a configuração da aplicação
 type Config struct {
-	OllamaURL            string
-	Model                string
-	Mode                 modes.OperationMode
-	WorkDir              string
-	Temperature          float64
-	MaxTokens            int
-	EnableSessions       bool
-	EnableCache          bool
-	EnableStatusLine     bool
-	EnableObservability  bool
-	EnableTodos          bool
-	EnableMultiModel     bool
-	CacheTTL             time.Duration
-	ObservabilityConfig  observability.LoggerConfig
+	OllamaURL           string
+	Model               string
+	Mode                modes.OperationMode
+	WorkDir             string
+	Temperature         float64
+	MaxTokens           int
+	EnableSessions      bool
+	EnableCache         bool
+	EnableStatusLine    bool
+	EnableObservability bool
+	EnableTodos         bool
+	EnableMultiModel    bool
+	CacheTTL            time.Duration
+	ObservabilityConfig observability.LoggerConfig
 }
 
 // ProvideLLMClient fornece LLM client

@@ -135,7 +135,7 @@ func (b *BackgroundTaskManager) startTask(taskName string, params map[string]int
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ Tarefa iniciada: %s (ID: %s)\n", taskName, taskID),
+		Message: fmt.Sprintf("✅ Tarefa iniciada: %s (ID: %s)\n", taskName, taskID),
 	}, nil
 }
 
@@ -251,7 +251,7 @@ Iniciado: %s
 
 	return Result{
 		Success: true,
-		Message:  output,
+		Message: output,
 	}, nil
 }
 
@@ -263,7 +263,7 @@ func (b *BackgroundTaskManager) listTasks() (Result, error) {
 	if len(b.tasks) == 0 {
 		return Result{
 			Success: true,
-			Message:  "Nenhuma tarefa em execução\n",
+			Message: "Nenhuma tarefa em execução\n",
 		}, nil
 	}
 
@@ -286,7 +286,7 @@ func (b *BackgroundTaskManager) listTasks() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output,
+		Message: output,
 	}, nil
 }
 
@@ -319,7 +319,7 @@ func (b *BackgroundTaskManager) cancelTask(taskID string) (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  fmt.Sprintf("✅ Tarefa cancelada: %s\n", taskID),
+		Message: fmt.Sprintf("✅ Tarefa cancelada: %s\n", taskID),
 	}, nil
 }
 
@@ -345,7 +345,7 @@ func (b *BackgroundTaskManager) getResult(taskID string) (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  task.Result,
+		Message: task.Result,
 	}, nil
 }
 

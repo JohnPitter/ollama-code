@@ -29,29 +29,29 @@ type StatusLine struct {
 
 // Config configuração da status line
 type Config struct {
-	Model       string
-	Mode        string
-	WorkDir     string
-	MaxTokens   int
-	ShowTokens  bool
-	ShowTime    bool
-	ShowTask    bool
-	Enabled     bool
+	Model      string
+	Mode       string
+	WorkDir    string
+	MaxTokens  int
+	ShowTokens bool
+	ShowTime   bool
+	ShowTask   bool
+	Enabled    bool
 }
 
 // New cria nova status line
 func New(cfg Config) *StatusLine {
 	return &StatusLine{
-		model:      cfg.Model,
-		mode:       cfg.Mode,
-		workDir:    cfg.WorkDir,
+		model:       cfg.Model,
+		mode:        cfg.Mode,
+		workDir:     cfg.WorkDir,
 		totalTokens: cfg.MaxTokens,
-		enabled:    cfg.Enabled,
-		cyan:       color.New(color.FgCyan),
-		yellow:     color.New(color.FgYellow),
-		green:      color.New(color.FgGreen),
-		magenta:    color.New(color.FgMagenta),
-		gray:       color.New(color.FgHiBlack),
+		enabled:     cfg.Enabled,
+		cyan:        color.New(color.FgCyan),
+		yellow:      color.New(color.FgYellow),
+		green:       color.New(color.FgGreen),
+		magenta:     color.New(color.FgMagenta),
+		gray:        color.New(color.FgHiBlack),
 	}
 }
 

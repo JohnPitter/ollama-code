@@ -45,9 +45,9 @@ type Subagent struct {
 	result      string      // Changed to unexported, use GetResult/SetResult
 	err         error       // Changed to unexported, use GetError/SetError
 	CreatedAt   time.Time
-	startedAt   time.Time     // Changed to unexported
-	completedAt time.Time     // Changed to unexported
-	mu          sync.RWMutex  // Protects mutable fields
+	startedAt   time.Time    // Changed to unexported
+	completedAt time.Time    // Changed to unexported
+	mu          sync.RWMutex // Protects mutable fields
 
 	// Context isolation
 	WorkDir     string

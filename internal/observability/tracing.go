@@ -24,8 +24,8 @@ type Span struct {
 
 // SpanEvent evento dentro de um span
 type SpanEvent struct {
-	Time    time.Time
-	Name    string
+	Time       time.Time
+	Name       string
 	Attributes map[string]string
 }
 

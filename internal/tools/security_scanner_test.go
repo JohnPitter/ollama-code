@@ -61,7 +61,6 @@ func TestSecurityScanner_Execute_InvalidType(t *testing.T) {
 
 	result, _ := ss.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for invalid type")
 	}
@@ -96,7 +95,6 @@ func main() {
 
 	result, _ := ss.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -130,7 +128,6 @@ func TestSecurityScanner_ScanSecrets_WithAPIKey(t *testing.T) {
 
 	result, _ := ss.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -150,7 +147,6 @@ func TestSecurityScanner_ScanAll(t *testing.T) {
 	}
 
 	result, _ := ss.Execute(ctx, params)
-
 
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
@@ -252,7 +248,6 @@ func TestSecurityScanner_Execute_DefaultType(t *testing.T) {
 	params := map[string]interface{}{}
 
 	result, _ := ss.Execute(ctx, params)
-
 
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)

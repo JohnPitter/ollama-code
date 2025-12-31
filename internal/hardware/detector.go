@@ -11,26 +11,26 @@ import (
 // Specs especificações de hardware detectadas
 type Specs struct {
 	// CPU
-	CPUCores      int    `json:"cpu_cores"`
-	CPUThreads    int    `json:"cpu_threads"`
-	CPUModel      string `json:"cpu_model"`
+	CPUCores   int    `json:"cpu_cores"`
+	CPUThreads int    `json:"cpu_threads"`
+	CPUModel   string `json:"cpu_model"`
 
 	// Memory
-	TotalRAM      int64  `json:"total_ram_mb"`
-	AvailableRAM  int64  `json:"available_ram_mb"`
+	TotalRAM     int64 `json:"total_ram_mb"`
+	AvailableRAM int64 `json:"available_ram_mb"`
 
 	// GPU
-	HasNVIDIAGPU  bool   `json:"has_nvidia_gpu"`
-	GPUModel      string `json:"gpu_model"`
-	GPUMemory     int64  `json:"gpu_memory_mb"`
-	GPUCount      int    `json:"gpu_count"`
+	HasNVIDIAGPU bool   `json:"has_nvidia_gpu"`
+	GPUModel     string `json:"gpu_model"`
+	GPUMemory    int64  `json:"gpu_memory_mb"`
+	GPUCount     int    `json:"gpu_count"`
 
 	// Storage
-	DiskSpace     int64  `json:"disk_space_gb"`
+	DiskSpace int64 `json:"disk_space_gb"`
 
 	// OS
-	OS            string `json:"os"`
-	Arch          string `json:"arch"`
+	OS   string `json:"os"`
+	Arch string `json:"arch"`
 }
 
 // Detector detector de hardware

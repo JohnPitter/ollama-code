@@ -117,7 +117,7 @@ func (t *TestRunner) runTests(params map[string]interface{}) (Result, error) {
 		output.WriteString(fmt.Sprintf("\n❌ Testes falharam: %s\n", err.Error()))
 		return Result{
 			Success: false,
-			Message:  output.String(),
+			Message: output.String(),
 			Error:   "Alguns testes falharam",
 		}, nil
 	}
@@ -126,7 +126,7 @@ func (t *TestRunner) runTests(params map[string]interface{}) (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -186,14 +186,14 @@ func (t *TestRunner) runCoverage(params map[string]interface{}) (Result, error) 
 	if err != nil {
 		return Result{
 			Success: false,
-			Message:  output.String(),
+			Message: output.String(),
 			Error:   err.Error(),
 		}, nil
 	}
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -233,14 +233,14 @@ func (t *TestRunner) runSingleTest(testPath string) (Result, error) {
 	if err != nil {
 		return Result{
 			Success: false,
-			Message:  output.String(),
+			Message: output.String(),
 			Error:   err.Error(),
 		}, nil
 	}
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 
@@ -267,7 +267,7 @@ func (t *TestRunner) watchTests() (Result, error) {
 
 	return Result{
 		Success: true,
-		Message:  output.String(),
+		Message: output.String(),
 	}, nil
 }
 

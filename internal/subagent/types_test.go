@@ -8,9 +8,9 @@ import (
 // TestAgentType_IsValid testa validação de tipos de agent
 func TestAgentType_IsValid(t *testing.T) {
 	testCases := []struct {
-		name     string
+		name      string
 		agentType AgentType
-		expected bool
+		expected  bool
 	}{
 		{"Explore is valid", AgentTypeExplore, true},
 		{"Plan is valid", AgentTypePlan, true},

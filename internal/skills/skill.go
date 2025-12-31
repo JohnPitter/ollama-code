@@ -45,10 +45,10 @@ type Result struct {
 
 // Metrics métricas de execução
 type Metrics struct {
-	ExecutionTime int64  // Tempo de execução em ms
-	TokensUsed    int    // Tokens usados (se aplicável)
-	APICallsMade  int    // Chamadas API feitas
-	CacheHits     int    // Hits de cache
+	ExecutionTime int64    // Tempo de execução em ms
+	TokensUsed    int      // Tokens usados (se aplicável)
+	APICallsMade  int      // Chamadas API feitas
+	CacheHits     int      // Hits de cache
 	SkillsInvoked []string // Skills invocados durante execução
 }
 

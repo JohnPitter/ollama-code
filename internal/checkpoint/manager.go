@@ -15,8 +15,8 @@ import (
 
 // Manager gerenciador de checkpoints
 type Manager struct {
-	checkpointDir string
-	retention     time.Duration
+	checkpointDir  string
+	retention      time.Duration
 	maxCheckpoints int
 }
 

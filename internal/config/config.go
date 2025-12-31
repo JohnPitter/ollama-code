@@ -21,38 +21,38 @@ type Config struct {
 
 // OllamaConfig configurações do Ollama
 type OllamaConfig struct {
-	URL              string `json:"url"`                          // URL do servidor Ollama
-	Model            string `json:"model"`                        // Modelo padrão
-	Temperature      float64 `json:"temperature,omitempty"`       // Temperatura (0.0-1.0)
-	MaxTokens        int    `json:"max_tokens,omitempty"`         // Max tokens por resposta
-	GPULayers        int    `json:"gpu_layers,omitempty"`         // Número de layers na GPU
-	NumGPU           int    `json:"num_gpu,omitempty"`            // Número de GPUs
-	MaxVRAM          int    `json:"max_vram,omitempty"`           // Max VRAM em MB
-	NumParallel      int    `json:"num_parallel,omitempty"`       // Requisições paralelas
-	FlashAttention   bool   `json:"flash_attention,omitempty"`    // Usar flash attention
+	URL            string  `json:"url"`                       // URL do servidor Ollama
+	Model          string  `json:"model"`                     // Modelo padrão
+	Temperature    float64 `json:"temperature,omitempty"`     // Temperatura (0.0-1.0)
+	MaxTokens      int     `json:"max_tokens,omitempty"`      // Max tokens por resposta
+	GPULayers      int     `json:"gpu_layers,omitempty"`      // Número de layers na GPU
+	NumGPU         int     `json:"num_gpu,omitempty"`         // Número de GPUs
+	MaxVRAM        int     `json:"max_vram,omitempty"`        // Max VRAM em MB
+	NumParallel    int     `json:"num_parallel,omitempty"`    // Requisições paralelas
+	FlashAttention bool    `json:"flash_attention,omitempty"` // Usar flash attention
 }
 
 // AppConfig configurações da aplicação
 type AppConfig struct {
-	Mode                string   `json:"mode"`                           // Modo padrão (readonly, interactive, autonomous)
-	WorkDir             string   `json:"work_dir,omitempty"`             // Diretório de trabalho padrão
-	OutputStyle         string   `json:"output_style,omitempty"`         // Estilo de output
-	EnableColors        bool     `json:"enable_colors"`                  // Usar cores no terminal
-	EnableCheckpoints   bool     `json:"enable_checkpoints"`             // Habilitar checkpoints automáticos
-	EnableSessions      bool     `json:"enable_sessions"`                // Habilitar sessões
-	EnableMemory        bool     `json:"enable_memory"`                  // Habilitar memória hierárquica
-	CheckpointRetention int      `json:"checkpoint_retention,omitempty"` // Dias de retenção
-	MaxCheckpoints      int      `json:"max_checkpoints,omitempty"`      // Máximo de checkpoints
-	LogLevel            string   `json:"log_level,omitempty"`            // Nível de log (debug, info, warn, error)
-	LogFile             string   `json:"log_file,omitempty"`             // Arquivo de log
+	Mode                string `json:"mode"`                           // Modo padrão (readonly, interactive, autonomous)
+	WorkDir             string `json:"work_dir,omitempty"`             // Diretório de trabalho padrão
+	OutputStyle         string `json:"output_style,omitempty"`         // Estilo de output
+	EnableColors        bool   `json:"enable_colors"`                  // Usar cores no terminal
+	EnableCheckpoints   bool   `json:"enable_checkpoints"`             // Habilitar checkpoints automáticos
+	EnableSessions      bool   `json:"enable_sessions"`                // Habilitar sessões
+	EnableMemory        bool   `json:"enable_memory"`                  // Habilitar memória hierárquica
+	CheckpointRetention int    `json:"checkpoint_retention,omitempty"` // Dias de retenção
+	MaxCheckpoints      int    `json:"max_checkpoints,omitempty"`      // Máximo de checkpoints
+	LogLevel            string `json:"log_level,omitempty"`            // Nível de log (debug, info, warn, error)
+	LogFile             string `json:"log_file,omitempty"`             // Arquivo de log
 }
 
 // PerformanceConfig configurações de performance
 type PerformanceConfig struct {
-	CacheTTL            int  `json:"cache_ttl,omitempty"`          // TTL do cache em minutos
-	EnableCache         bool `json:"enable_cache"`                  // Habilitar cache
-	MaxConcurrentTools  int  `json:"max_concurrent_tools,omitempty"` // Max tools paralelas
-	CommandTimeout      int  `json:"command_timeout,omitempty"`     // Timeout de comandos em segundos
+	CacheTTL           int  `json:"cache_ttl,omitempty"`            // TTL do cache em minutos
+	EnableCache        bool `json:"enable_cache"`                   // Habilitar cache
+	MaxConcurrentTools int  `json:"max_concurrent_tools,omitempty"` // Max tools paralelas
+	CommandTimeout     int  `json:"command_timeout,omitempty"`      // Timeout de comandos em segundos
 }
 
 // DefaultConfig retorna configuração padrão

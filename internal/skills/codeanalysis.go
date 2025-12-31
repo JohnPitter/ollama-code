@@ -146,12 +146,12 @@ func (c *CodeAnalysisSkill) determineAnalysisType(task Task) string {
 // analyzeComplexity análise de complexidade
 func (c *CodeAnalysisSkill) analyzeComplexity(code, filePath string) map[string]interface{} {
 	return map[string]interface{}{
-		"type":                "complexity",
+		"type":                  "complexity",
 		"cyclomatic_complexity": 5,
 		"cognitive_complexity":  3,
-		"lines_of_code":        45,
-		"functions":            3,
-		"rating":              "A",
+		"lines_of_code":         45,
+		"functions":             3,
+		"rating":                "A",
 		"issues": []string{
 			"Função 'processData' tem complexidade ciclomática de 8 (recomendado < 10)",
 		},
@@ -181,8 +181,8 @@ func (c *CodeAnalysisSkill) analyzeSecurity(code, filePath string) map[string]in
 // analyzePerformance análise de performance
 func (c *CodeAnalysisSkill) analyzePerformance(code, filePath string) map[string]interface{} {
 	return map[string]interface{}{
-		"type":             "performance",
-		"bottlenecks":      2,
+		"type":                       "performance",
+		"bottlenecks":                2,
 		"optimization_opportunities": 3,
 		"issues": []string{
 			"Loop aninhado com O(n²) - considerar usar map para O(n)",
@@ -195,13 +195,13 @@ func (c *CodeAnalysisSkill) analyzePerformance(code, filePath string) map[string
 // analyzeGeneral análise geral
 func (c *CodeAnalysisSkill) analyzeGeneral(code, filePath string) map[string]interface{} {
 	return map[string]interface{}{
-		"type":           "general",
-		"total_issues":   5,
-		"critical":       0,
-		"high":           1,
-		"medium":         2,
-		"low":            2,
-		"code_quality":   "B+",
+		"type":            "general",
+		"total_issues":    5,
+		"critical":        0,
+		"high":            1,
+		"medium":          2,
+		"low":             2,
+		"code_quality":    "B+",
 		"maintainability": 75,
 		"issues": []map[string]interface{}{
 			{

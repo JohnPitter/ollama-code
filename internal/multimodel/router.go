@@ -150,9 +150,9 @@ func (r *Router) Stats() map[string]interface{} {
 	defer r.mu.RUnlock()
 
 	return map[string]interface{}{
-		"enabled":       r.config.Enabled,
-		"cached_models": len(r.clients),
+		"enabled":          r.config.Enabled,
+		"cached_models":    len(r.clients),
 		"configured_tasks": len(r.config.Models),
-		"default_model": r.config.DefaultModel.Name,
+		"default_model":    r.config.DefaultModel.Name,
 	}
 }

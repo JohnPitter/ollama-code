@@ -8,8 +8,8 @@ import (
 
 // JSONValidator valida e extrai JSON
 type JSONValidator struct {
-	jsonRegex       *regexp.Regexp
-	jsonBlockRegex  *regexp.Regexp
+	jsonRegex      *regexp.Regexp
+	jsonBlockRegex *regexp.Regexp
 }
 
 // NewJSONValidator cria novo validador

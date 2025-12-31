@@ -126,11 +126,11 @@ func (p *ProjectAnalyzer) buildDirectoryTree(dir, prefix string, depth, maxDepth
 // analyzeStats analisa estatísticas do projeto
 func (p *ProjectAnalyzer) analyzeStats() (Result, error) {
 	stats := map[string]interface{}{
-		"total_files":    0,
-		"total_dirs":     0,
-		"total_size":     int64(0),
-		"file_types":     make(map[string]int),
-		"largest_files":  []map[string]interface{}{},
+		"total_files":   0,
+		"total_dirs":    0,
+		"total_size":    int64(0),
+		"file_types":    make(map[string]int),
+		"largest_files": []map[string]interface{}{},
 	}
 
 	err := filepath.Walk(p.workDir, func(path string, info os.FileInfo, err error) error {

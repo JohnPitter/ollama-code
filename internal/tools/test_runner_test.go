@@ -69,7 +69,6 @@ func TestTestRunner_Execute_InvalidAction(t *testing.T) {
 
 	result, _ := tr.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for invalid action")
 	}
@@ -142,7 +141,6 @@ func TestTestRunner_Execute_Watch(t *testing.T) {
 
 	result, _ := tr.Execute(ctx, params)
 
-
 	if !result.Success {
 		t.Errorf("Result should be successful, got error: %s", result.Error)
 	}
@@ -166,7 +164,6 @@ func TestTestRunner_Execute_Run_UnsupportedProject(t *testing.T) {
 
 	result, _ := tr.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for unsupported project")
 	}
@@ -189,7 +186,6 @@ func TestTestRunner_Execute_Coverage_UnsupportedProject(t *testing.T) {
 
 	result, _ := tr.Execute(ctx, params)
 
-
 	if result.Success {
 		t.Error("Result should not be successful for unsupported project")
 	}
@@ -209,7 +205,6 @@ func TestTestRunner_Execute_Single(t *testing.T) {
 
 	result, _ := tr.Execute(ctx, params)
 
-
 	// May fail for unsupported project, but should not panic
 	if !result.Success {
 		t.Logf("Single test failed as expected: %s", result.Error)
@@ -227,7 +222,6 @@ func TestTestRunner_Execute_DefaultAction(t *testing.T) {
 	params := map[string]interface{}{}
 
 	result, _ := tr.Execute(ctx, params)
-
 
 	// Should fail for unknown project, but not panic
 	if !result.Success {

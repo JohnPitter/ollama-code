@@ -77,12 +77,12 @@ func (c *CommandExecutor) Execute(ctx context.Context, params map[string]interfa
 
 	// Preparar resultado
 	result := map[string]interface{}{
-		"command":      command,
-		"exit_code":    0,
-		"stdout":       stdout.String(),
-		"stderr":       stderr.String(),
-		"duration_ms":  duration.Milliseconds(),
-		"working_dir":  c.workDir,
+		"command":     command,
+		"exit_code":   0,
+		"stdout":      stdout.String(),
+		"stderr":      stderr.String(),
+		"duration_ms": duration.Milliseconds(),
+		"working_dir": c.workDir,
 	}
 
 	// Se houve erro

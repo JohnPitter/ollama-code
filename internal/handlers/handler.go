@@ -21,12 +21,12 @@ type Dependencies struct {
 	SkillRegistry   SkillRegistry
 
 	// Managers
-	ConfirmManager  ConfirmationManager
-	SessionManager  SessionManager
-	CacheManager    CacheManager
-	TodoManager     TodoManager
-	DiffManager     DiffManager
-	PreviewManager  PreviewManager
+	ConfirmManager ConfirmationManager
+	SessionManager SessionManager
+	CacheManager   CacheManager
+	TodoManager    TodoManager
+	DiffManager    DiffManager
+	PreviewManager PreviewManager
 
 	// Clients
 	LLMClient      LLMClient

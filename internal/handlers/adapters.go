@@ -7,6 +7,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/cache"
 	"github.com/johnpitter/ollama-code/internal/commands"
 	"github.com/johnpitter/ollama-code/internal/confirmation"
+	"github.com/johnpitter/ollama-code/internal/diff"
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
@@ -15,7 +16,6 @@ import (
 	"github.com/johnpitter/ollama-code/internal/todos"
 	"github.com/johnpitter/ollama-code/internal/tools"
 	"github.com/johnpitter/ollama-code/internal/websearch"
-	"github.com/johnpitter/ollama-code/internal/diff"
 )
 
 // ToolRegistryAdapter adapta tools.Registry para handlers.ToolRegistry

@@ -16,10 +16,10 @@ type Option struct {
 
 // Answer representa a resposta do usuário
 type Answer struct {
-	Question      string   // Pergunta respondida
-	SelectedLabel string   // Label da opção selecionada (single select)
+	Question       string   // Pergunta respondida
+	SelectedLabel  string   // Label da opção selecionada (single select)
 	SelectedLabels []string // Labels das opções selecionadas (multi select)
-	CustomInput   string   // Input customizado (quando selecionou "Other")
+	CustomInput    string   // Input customizado (quando selecionou "Other")
 }
 
 // QuestionSet representa um conjunto de perguntas (1-4)
