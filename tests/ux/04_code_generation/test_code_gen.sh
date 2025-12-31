@@ -10,7 +10,9 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-OLLAMA_CODE="../../build/ollama-code.exe"
+# Get absolute path to executable before changing directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OLLAMA_CODE="$(cd "$SCRIPT_DIR/../../.." && pwd)/build/ollama-code.exe"
 TEST_DIR="/tmp/ollama_codegen_test_$$"
 PASSED=0
 FAILED=0

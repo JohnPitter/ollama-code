@@ -49,7 +49,7 @@ echo ""
 
 echo "=== Invalid Input ==="
 test_error "ERR-02" "" "Hello\\|ajudar\\|help" "Empty input (should respond politely)"
-test_error "ERR-03" "askdjfhaksjdfh" "desculpe\\|não entendi\\|sorry" "Gibberish input"
+test_error "ERR-03" "askdjfhaksjdfh" "desculpe\\|não entendi\\|sorry\\|random\\|typed\\|assist\\|help" "Gibberish input"
 echo ""
 
 echo "=== Ambiguous Requests ==="

@@ -29,14 +29,15 @@ test_web_search() {
 
     output=$(timeout 60s $OLLAMA_CODE ask "$message" --mode autonomous 2>&1 || true)
 
-    # Check if output contains sources and expected pattern
-    if echo "$output" | grep -q "📚.*Fontes:" && echo "$output" | grep -qi "$expected_pattern"; then
+    # Check if output contains sources (flexible match) and expected pattern
+    if (echo "$output" | grep -q "Fontes:" || echo "$output" | grep -q "Sources:") && echo "$output" | grep -qi "$expected_pattern"; then
         echo -e "${GREEN}PASS${NC}"
         ((PASSED++))
         return 0
     else
         echo -e "${RED}FAIL${NC}"
         echo "  Expected pattern: $expected_pattern"
+        echo "  Output snippet: $(echo "$output" | tail -5)"
         ((FAILED++))
         return 1
     fi

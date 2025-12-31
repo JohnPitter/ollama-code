@@ -43,8 +43,15 @@ INTENÇÕES DISPONÍVEIS:
 3. execute_command - Usuário quer executar comando shell
    Exemplos: "rode os testes", "execute npm install", "faça build do projeto"
 
-4. search_code - Usuário quer buscar código no projeto existente
-   Exemplos: "onde está a função processUser", "procure por 'database connection'", "encontre todos os handlers"
+4. search_code - Usuário quer buscar/localizar código no projeto existente
+   Exemplos:
+   - "onde está a função processUser"
+   - "onde está a struct User"
+   - "procure por 'database connection'"
+   - "encontre todos os handlers"
+   - "busca a classe Config"
+
+   IMPORTANTE: "onde está X" = search_code (NÃO read_file!)
 
 5. analyze_project - Usuário quer entender estrutura do projeto
    Exemplos: "qual a estrutura do projeto", "quais arquivos temos", "me mostre a arquitetura"
