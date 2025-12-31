@@ -62,7 +62,68 @@ func (h *GitHandler) Handle(ctx context.Context, deps *Dependencies, result *int
 		return "", fmt.Errorf("erro: %s", toolResult.Error)
 	}
 
-	return toolResult.Message, nil
+	// Formatar resultado com output do comando git
+	return h.formatGitResult(toolResult, operation), nil
+}
+
+// formatGitResult formata resultado da operação git com output
+func (h *GitHandler) formatGitResult(result ToolResult, operation string) string {
+	output := result.Message + "\n\n"
+
+	// Obter output do comando
+	gitOutput, hasOutput := result.Data["output"].(string)
+
+	if !hasOutput || gitOutput == "" {
+		output += "✓ Operação concluída (sem output)\n"
+		return output
+	}
+
+	// Formatar baseado na operação
+	switch operation {
+	case "status":
+		output += "📊 Status do repositório:\n\n"
+		if strings.TrimSpace(gitOutput) == "" {
+			output += "✓ Nada a commitar, diretório de trabalho limpo\n"
+		} else {
+			output += fmt.Sprintf("```\n%s\n```\n", gitOutput)
+		}
+
+	case "log":
+		output += "📜 Histórico de commits:\n\n"
+		output += fmt.Sprintf("```\n%s\n```\n", gitOutput)
+
+	case "diff":
+		output += "🔍 Diferenças:\n\n"
+		if strings.TrimSpace(gitOutput) == "" {
+			output += "✓ Nenhuma alteração detectada\n"
+		} else {
+			// Limitar diff para primeiras 50 linhas
+			lines := strings.Split(gitOutput, "\n")
+			limit := 50
+			if len(lines) < limit {
+				limit = len(lines)
+			}
+
+			output += "```diff\n"
+			for i := 0; i < limit; i++ {
+				output += lines[i] + "\n"
+			}
+			if len(lines) > limit {
+				output += fmt.Sprintf("\n... e mais %d linhas\n", len(lines)-limit)
+			}
+			output += "```\n"
+		}
+
+	case "branch":
+		output += "🌿 Branches:\n\n"
+		output += fmt.Sprintf("```\n%s\n```\n", gitOutput)
+
+	default:
+		// Output genérico para outros comandos
+		output += fmt.Sprintf("Output:\n\n```\n%s\n```\n", gitOutput)
+	}
+
+	return output
 }
 
 // needsInteraction verifica se operação precisa de confirmação

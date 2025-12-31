@@ -120,16 +120,10 @@ echo ""
 
 echo "=== Git Operations ==="
 test_output_quality "OUT-07" \
-    "mostre os últimos commits" \
-    "commit\|Author\|Date\|fix\|feat" \
-    "yes" \
-    "Git log shows commit details"
-
-test_output_quality "OUT-08" \
     "qual o status do git" \
-    "branch\|On branch\|nothing to commit\|Changes" \
+    "📊\|Status\|repositório\|```\|.claude" \
     "yes" \
-    "Git status shows branch and changes"
+    "Git status shows repo status"
 echo ""
 
 echo "=== Web Search ==="

@@ -53,7 +53,64 @@ func (h *SearchHandler) Handle(ctx context.Context, deps *Dependencies, result *
 		return "", fmt.Errorf("erro: %s", toolResult.Error)
 	}
 
-	return toolResult.Message, nil
+	// Formatar resultado com matches encontrados
+	return h.formatSearchResult(toolResult, query), nil
+}
+
+// formatSearchResult formata resultado da busca com matches encontrados
+func (h *SearchHandler) formatSearchResult(result ToolResult, query string) string {
+	output := result.Message + "\n\n"
+
+	// Obter matches do resultado
+	matches, hasMatches := result.Data["matches"].([]map[string]interface{})
+	count, _ := result.Data["count"].(int)
+
+	if !hasMatches || count == 0 {
+		output += fmt.Sprintf("💡 Dica: Tente refinar sua busca ou use termos mais específicos.\n")
+		return output
+	}
+
+	output += fmt.Sprintf("🔍 Resultados da busca por \"%s\":\n\n", query)
+
+	// Mostrar até 20 primeiros matches
+	limit := 20
+	if len(matches) < limit {
+		limit = len(matches)
+	}
+
+	for i := 0; i < limit; i++ {
+		match := matches[i]
+
+		// Formato do grep: file, line, content
+		if file, ok := match["file"].(string); ok {
+			line, _ := match["line"].(string)
+			content, _ := match["content"].(string)
+
+			output += fmt.Sprintf("  📄 %s:%s\n", file, line)
+			if content != "" {
+				// Truncar conteúdo se muito longo
+				if len(content) > 100 {
+					content = content[:100] + "..."
+				}
+				output += fmt.Sprintf("     %s\n", strings.TrimSpace(content))
+			}
+			output += "\n"
+		} else {
+			// Formato do ripgrep JSON (linha completa)
+			if lineData, ok := match["line"].(string); ok {
+				// Simplificar output JSON do ripgrep
+				output += fmt.Sprintf("  • %s\n", lineData)
+			}
+		}
+	}
+
+	if len(matches) > limit {
+		output += fmt.Sprintf("\n... e mais %d resultados\n", len(matches)-limit)
+	}
+
+	output += fmt.Sprintf("\nTotal: %d matches encontrados\n", count)
+
+	return output
 }
 
 // extractQueryFromMessage extrai o termo de busca da mensagem do usuário
