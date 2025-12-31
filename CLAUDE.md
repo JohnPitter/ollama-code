@@ -13,25 +13,25 @@ Ollama Code is a 100% local AI coding assistant that runs entirely on the user's
 Follow these 12 principles when developing features or making changes:
 
 1. **Clean Architecture** - Maintain separation of concerns, use Handler Pattern, avoid God objects, follow SOLID principles
-2. **Performance Based on Big O Notation** - Analyze algorithm complexity, optimize critical paths, avoid O(n²) when O(n log n) is possible
+2. **Performance Based on Big O Notation Theory** - Analyze algorithm complexity, optimize critical paths, avoid O(n²) when O(n log n) is possible
 3. **Mitigated Against Major CVEs** - Check for common vulnerabilities (injection, XSS, path traversal), validate all inputs, sanitize outputs
 4. **Service Resilience and Cache Usage** - Implement proper error handling, use the cache manager for expensive operations, design for failure recovery
 5. **Modern Context-Based Design** - Use context.Context for cancellation and timeouts, pass context through the call chain
-6. **Functionality Guaranteed Through Test Pyramid** - Unit tests (majority), integration tests (moderate), E2E tests (few but critical)
-7. **Security** - Validate file paths, sanitize user input, never execute arbitrary code without confirmation, check permissions
-8. **Observability** - Use structured logging, record metrics, create spans for distributed tracing, enable debugging in production
+6. **Functionality Guaranteed Through Unit, E2E and UX Tests** - Unit tests (majority), integration tests (moderate), E2E tests (few but critical), UX regression tests for user experience validation
+7. **Security Against Data Leaks** - Validate file paths, sanitize user input, never execute arbitrary code without confirmation, check permissions, prevent data leaks
+8. **Application of Logs and Observability Concepts** - Use structured logging, record metrics, create spans for distributed tracing, enable debugging in production
 9. **Design System Principles** - Consistent error messages, uniform output formatting, predictable user experience
-10. **Create a Plan and Build in Phases/Subphases** - Break down complex features, implement incrementally, validate each phase
-11. **Document Changes** - Update relevant documentation files, add entries to `changes/` directory for significant features
-12. **Functional Build with CHANGELOG.md** - Ensure `make build` succeeds after changes, document all changes in CHANGELOG.md
+10. **Create a Plan and Build in Phases and Subphases** - Break down complex features, implement incrementally, validate each phase
+11. **Changes Documented in CHANGELOG.MD** - Document all changes in CHANGELOG.md, update relevant documentation files, add entries to `changes/` directory for significant features
+12. **Application Changes with Functional Build and Unused Imports Removed** - Ensure `make build` succeeds after changes, remove unused imports, keep codebase clean
 
 ### Agent Behavior Guidelines
 
 When acting as an AI agent working on this codebase:
 
-1. **Long-Running Commands** - If a command takes too long to execute, cancel it or run it as a subprocess. Don't block the main thread.
-2. **Try Alternative Approaches** - If a solution doesn't work, research alternatives on the internet. Don't repeat the same failing approach.
-3. **Token Economy** - Focus on implementation over summaries. Be concise in explanations, verbose in code quality.
+1. **Long-Running Commands: Cancel or Turn Into Subprocess** - If a command takes too long to execute, cancel it or run it as a subprocess. Don't block the main thread.
+2. **Try Alternative Approaches by Researching on the Internet** - If a solution doesn't work, research alternatives on the internet. Don't repeat the same failing approach.
+3. **Token Economy: Focus on Implementation, Less on Summaries** - Focus on implementation over summaries. Be concise in explanations, verbose in code quality.
 
 ## Build, Test, and Development Commands
 
