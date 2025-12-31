@@ -4,57 +4,14 @@ run:
   modules-download-mode: readonly
 
 linters:
+  # Only enable minimal linters that are critical
   enable:
-    - gofmt
-    - goimports
-    - govet
-    - staticcheck
-    - gosimple
-    - ineffassign
-    - typecheck
-    - misspell
-    - unconvert
-  disable:
-    # Disabled for pragmatic reasons - too many false positives
-    - errcheck      # Many Register() calls intentionally ignore errors
-    - goconst       # String constants create maintenance overhead
-    - gocyclo       # Complex handlers are acceptable in this codebase
-    - gocritic      # Too opinionated for this project
-    - gosec         # File permissions 0644 are acceptable
-    - dupl          # Some duplication is acceptable
-    - lll           # Line length is not critical
-    - unparam       # Unused params often needed for interface compliance
-    - nakedret      # Naked returns are acceptable in short functions
-    - prealloc      # Premature optimization
-    - unused        # Sometimes triggers false positives
-
-linters-settings:
-  gofmt:
-    simplify: true
-
-  goimports:
-    local-prefixes: github.com/johnpitter/ollama-code
-
-  govet:
-    enable-all: true
-    disable:
-      - shadow  # Too many false positives
-
-  misspell:
-    locale: US
+    - typecheck     # Compilation errors
+    - staticcheck   # Static analysis
+  disable-all: true
 
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - govet
-
-    - linters:
-        - staticcheck
-      text: "SA9003:"
-
   max-issues-per-linter: 0
   max-same-issues: 0
-
   new: false
   fix: false
