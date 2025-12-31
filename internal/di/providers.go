@@ -13,6 +13,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
+	"github.com/johnpitter/ollama-code/internal/multimodel"
 	"github.com/johnpitter/ollama-code/internal/observability"
 	"github.com/johnpitter/ollama-code/internal/ollamamd"
 	"github.com/johnpitter/ollama-code/internal/session"
@@ -37,6 +38,7 @@ type Config struct {
 	EnableStatusLine     bool
 	EnableObservability  bool
 	EnableTodos          bool
+	EnableMultiModel     bool
 	CacheTTL             time.Duration
 	ObservabilityConfig  observability.LoggerConfig
 }
@@ -297,4 +299,25 @@ func ProvideSubagentManager(executor *subagent.Executor) *subagent.Manager {
 	// Criar ExecutorFunc a partir do Executor
 	executorFunc := executor.CreateExecutorFunc()
 	return subagent.NewManager(executorFunc)
+}
+
+// ProvideMultiModelRouter fornece router de multi-model
+func ProvideMultiModelRouter(cfg *Config) *multimodel.Router {
+	var mmConfig *multimodel.Config
+
+	if cfg.EnableMultiModel {
+		mmConfig = multimodel.DefaultConfig()
+	} else {
+		// Multi-model desabilitado - criar config que sempre usa default
+		mmConfig = multimodel.NewConfig()
+		mmConfig.DefaultModel = multimodel.ModelSpec{
+			Name:        cfg.Model,
+			MaxTokens:   cfg.MaxTokens,
+			Temperature: cfg.Temperature,
+			Description: "Default model",
+		}
+		mmConfig.Disable()
+	}
+
+	return multimodel.NewRouter(cfg.OllamaURL, mmConfig)
 }

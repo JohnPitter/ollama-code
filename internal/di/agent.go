@@ -26,6 +26,9 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 	subagentExecutor := ProvideSubagentExecutor(cfg)
 	subagentManager := ProvideSubagentManager(subagentExecutor)
 
+	// Multi-Model System
+	multiModelRouter := ProvideMultiModelRouter(cfg)
+
 	// Ollama context
 	ollamaContext, err := ProvideOllamaContext(cfg)
 	if err != nil {
@@ -66,31 +69,32 @@ func InitializeAgent(cfg *Config) (*agent.Agent, error) {
 
 	// Criar Agent com todas as dependências
 	agentInstance := &agent.Agent{
-		LLMClient:       llmClient,
-		IntentDetector:  intentDetector,
-		ToolRegistry:    toolRegistry,
-		CommandRegistry: commandRegistry,
-		SkillRegistry:   skillRegistry,
-		ConfirmManager:  confirmManager,
-		WebSearch:       webSearch,
-		SessionManager:  sessionManager,
-		Cache:           cacheManager,
-		StatusLine:      statusLine,
-		OllamaContext:   ollamaContext,
-		HandlerRegistry: handlerRegistry,
-		TodoManager:     todoManager,
-		Differ:          differ,
-		Previewer:       previewer,
-		SubagentManager: subagentManager,
-		Mode:            cfg.Mode,
-		WorkDir:         cfg.WorkDir,
-		History:         []llm.Message{},
-		RecentFiles:     []string{},
-		Mu:              sync.Mutex{},
-		ColorGreen:      color.New(color.FgGreen, color.Bold),
-		ColorBlue:       color.New(color.FgBlue, color.Bold),
-		ColorYellow:     color.New(color.FgYellow),
-		ColorRed:        color.New(color.FgRed),
+		LLMClient:        llmClient,
+		IntentDetector:   intentDetector,
+		ToolRegistry:     toolRegistry,
+		CommandRegistry:  commandRegistry,
+		SkillRegistry:    skillRegistry,
+		ConfirmManager:   confirmManager,
+		WebSearch:        webSearch,
+		SessionManager:   sessionManager,
+		Cache:            cacheManager,
+		StatusLine:       statusLine,
+		OllamaContext:    ollamaContext,
+		HandlerRegistry:  handlerRegistry,
+		TodoManager:      todoManager,
+		Differ:           differ,
+		Previewer:        previewer,
+		SubagentManager:  subagentManager,
+		MultiModelRouter: multiModelRouter,
+		Mode:             cfg.Mode,
+		WorkDir:          cfg.WorkDir,
+		History:          []llm.Message{},
+		RecentFiles:      []string{},
+		Mu:               sync.Mutex{},
+		ColorGreen:       color.New(color.FgGreen, color.Bold),
+		ColorBlue:        color.New(color.FgBlue, color.Bold),
+		ColorYellow:      color.New(color.FgYellow),
+		ColorRed:         color.New(color.FgRed),
 	}
 
 	return agentInstance, nil

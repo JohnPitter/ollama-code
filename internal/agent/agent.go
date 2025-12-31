@@ -16,6 +16,7 @@ import (
 	"github.com/johnpitter/ollama-code/internal/intent"
 	"github.com/johnpitter/ollama-code/internal/llm"
 	"github.com/johnpitter/ollama-code/internal/modes"
+	"github.com/johnpitter/ollama-code/internal/multimodel"
 	"github.com/johnpitter/ollama-code/internal/observability"
 	"github.com/johnpitter/ollama-code/internal/ollamamd"
 	"github.com/johnpitter/ollama-code/internal/session"
@@ -47,6 +48,7 @@ type Agent struct {
 	Differ          *diff.Differ
 	Previewer       *diff.Previewer
 	SubagentManager *subagent.Manager
+	MultiModelRouter *multimodel.Router
 	Mode            modes.OperationMode
 	WorkDir         string
 	History         []llm.Message
