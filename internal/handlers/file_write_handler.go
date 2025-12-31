@@ -171,7 +171,12 @@ func (h *FileWriteHandler) generateAndWrite(ctx context.Context, deps *Dependenc
 			// Tentar inferir do userMessage
 			filePath = h.fileValidator.ExtractFilename(userMessage)
 			if filePath == "" {
-				return "", fmt.Errorf("não foi possível determinar o caminho do arquivo")
+				// Último recurso: perguntar ao LLM por um nome apropriado
+				inferredPath, err := h.askLLMForFilename(ctx, deps, userMessage)
+				if err != nil || inferredPath == "" {
+					return "", fmt.Errorf("não foi possível determinar o caminho do arquivo")
+				}
+				filePath = inferredPath
 			}
 		}
 	}
@@ -471,4 +476,30 @@ func (h *FileWriteHandler) buildMultiFilePrompt(userMessage string, deps *Depend
 	prompt.WriteString("Now generate the files:\n")
 
 	return prompt.String()
+}
+
+// askLLMForFilename usa LLM para inferir nome de arquivo apropriado
+func (h *FileWriteHandler) askLLMForFilename(ctx context.Context, deps *Dependencies, userMessage string) (string, error) {
+	prompt := fmt.Sprintf(`Based on this request, suggest an appropriate filename:
+
+Request: %s
+
+Output ONLY the filename (e.g., "App.js", "index.html", "main.py"). No explanations, just the filename.`, userMessage)
+
+	response, err := deps.LLMClient.Complete(ctx, prompt)
+	if err != nil {
+		return "", err
+	}
+
+	// Limpar resposta (remover quotes, espaços, etc)
+	filename := strings.TrimSpace(response)
+	filename = strings.Trim(filename, "\"'`")
+	filename = strings.Split(filename, "\n")[0] // Primeira linha apenas
+
+	// Validar
+	if !h.fileValidator.IsValid(filename) {
+		return "", fmt.Errorf("nome inferido inválido: %s", filename)
+	}
+
+	return filename, nil
 }

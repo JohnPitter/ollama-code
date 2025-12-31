@@ -58,35 +58,80 @@ func (h *SearchHandler) Handle(ctx context.Context, deps *Dependencies, result *
 
 // extractQueryFromMessage extrai o termo de busca da mensagem do usuário
 func extractQueryFromMessage(message string) string {
-	// Remove palavras comuns de busca para extrair o termo
-	message = strings.ToLower(message)
-
-	// Padrões comuns: "busca X", "procure por X", "encontre X", "onde está X"
-	replacements := []string{
-		"busca a função ", "busca função ", "busca o ", "busca a ", "busca ",
-		"procure por ", "procure ", "procura ",
-		"encontre a ", "encontre o ", "encontre ",
-		"onde está ", "onde está a ", "onde está o ",
-		"acha a ", "acha o ", "acha ",
-		"search for ", "search ", "find ",
+	if message == "" {
+		return ""
 	}
 
-	query := message
-	for _, prefix := range replacements {
-		if strings.HasPrefix(query, prefix) {
-			query = strings.TrimPrefix(query, prefix)
+	messageLower := strings.ToLower(message)
+
+	// Padrões comuns de busca com captura do termo
+	patterns := []struct {
+		prefix string
+		extract func(string, string) string
+	}{
+		// Português
+		{"busca a função ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"busca função ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"busca o ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"busca a ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"busca ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"buscar ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"procure por ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"procure ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"procura ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"procurar ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"encontre a ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"encontre o ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"encontre ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"encontrar ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"onde está ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"onde está a ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"onde está o ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"acha a ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"acha o ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"acha ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"achar ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		// Inglês
+		{"search for ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"search ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"find ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"locate ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+		{"look for ", func(msg, p string) string { return strings.TrimPrefix(msg, p) }},
+	}
+
+	query := messageLower
+	for _, pattern := range patterns {
+		if strings.HasPrefix(query, pattern.prefix) {
+			query = pattern.extract(query, pattern.prefix)
 			break
 		}
 	}
 
-	// Remover aspas se houver
-	query = strings.Trim(query, "\"'")
-	query = strings.TrimSpace(query)
+	// Remover aspas e espaços
+	query = strings.Trim(query, "\"'` \t\n\r")
 
-	// Se a query ficou muito curta (< 2 chars), retornar a mensagem original sem os prefixos comuns
-	if len(query) < 2 {
-		return message
+	// Se a query ficou muito curta ou igual à mensagem original,
+	// tentar usar a mensagem completa como query
+	if len(query) < 2 || query == messageLower {
+		// Última tentativa: pegar qualquer coisa após verbos de busca
+		words := strings.Fields(messageLower)
+		if len(words) > 1 {
+			// Se primeira palavra é um verbo de busca, pegar resto
+			searchVerbs := []string{"busca", "buscar", "procure", "procurar", "encontre", "encontrar",
+				                     "acha", "achar", "search", "find", "locate", "look"}
+			for _, verb := range searchVerbs {
+				if words[0] == verb || words[0] == verb+"r" {
+					query = strings.Join(words[1:], " ")
+					break
+				}
+			}
+		}
+
+		// Se ainda não tem query válida, usar mensagem inteira como fallback
+		if len(query) < 2 {
+			query = messageLower
+		}
 	}
 
-	return query
+	return strings.TrimSpace(query)
 }

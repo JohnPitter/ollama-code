@@ -41,8 +41,8 @@ func (c *CodeSearcher) RequiresConfirmation() bool {
 func (c *CodeSearcher) Execute(ctx context.Context, params map[string]interface{}) (Result, error) {
 	// Obter query de busca
 	query, ok := params["query"].(string)
-	if !ok {
-		return NewErrorResult(fmt.Errorf("query parameter required")), nil
+	if !ok || query == "" {
+		return NewErrorResult(fmt.Errorf("query parameter required: specify what to search for")), nil
 	}
 
 	// Padrão de arquivo (opcional)
