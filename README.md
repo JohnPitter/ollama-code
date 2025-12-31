@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI/CD](https://github.com/johnpitter/ollama-code/workflows/CI/CD/badge.svg)](https://github.com/johnpitter/ollama-code/actions)
-[![Tests](https://img.shields.io/badge/Tests-143_passing-success)](.)
+[![Tests](https://img.shields.io/badge/Tests-210+_passing-success)](.)
 [![Coverage](https://img.shields.io/badge/Coverage-Codecov-blue)](https://codecov.io/gh/johnpitter/ollama-code)
 [![Go Report Card](https://goreportcard.com/badge/github.com/johnpitter/ollama-code)](https://goreportcard.com/report/github.com/johnpitter/ollama-code)
 
@@ -25,11 +25,11 @@
 
 Ollama Code é um **assistente de programação com inteligência artificial** que:
 - ✅ Roda 100% no seu computador (privacidade total!)
-- ✅ Não precisa de internet depois de instalar
+- ✅ Funciona offline para a maioria das operações
 - ✅ É grátis e open source
 - ✅ Funciona com Ollama (modelos de IA locais)
 - ✅ Entende e escreve código em várias linguagens
-- ✅ Pesquisa na internet por você
+- ✅ Pesquisa na internet por você (opcional, requer conexão)
 - ✅ Analisa seu código e sugere melhorias
 
 ## 💡 Por que usar?
@@ -60,18 +60,20 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 ### Passo 2: Baixar um modelo de IA
 
-Escolha um modelo (recomendamos começar com o menor):
+Escolha um modelo baseado na sua RAM disponível:
 
 ```bash
-# Modelo pequeno (4GB RAM) - Rápido mas menos preciso
+# Modelo pequeno (4GB RAM) - Rápido, ideal para começar
 ollama pull qwen2.5-coder:7b
 
-# Modelo médio (8GB RAM) - Balanceado ⭐ RECOMENDADO
+# Modelo médio (8GB RAM) - Balanceado (Recomendado se tiver RAM)
 ollama pull qwen2.5-coder:14b
 
 # Modelo grande (16GB+ RAM) - Mais preciso mas mais lento
 ollama pull qwen2.5-coder:32b
 ```
+
+> **Dica:** Comece com o modelo 7b. Se funcionar bem, experimente o 14b para resultados melhores.
 
 ### Passo 3: Instalar Ollama Code
 
@@ -321,11 +323,31 @@ Encontrei alguns pontos de melhoria:
 
 ## 📚 Documentação Completa
 
+### Guias Principais
+
+- [CLAUDE.md](CLAUDE.md) - Guia completo para desenvolvedores (arquitetura, troubleshooting, padrões)
+- [ROADMAP.md](ROADMAP.md) - Roadmap de desenvolvimento e status das features
+- [docs/guides/CONTRIBUTING.md](docs/guides/CONTRIBUTING.md) - Como contribuir
+
+### Arquitetura
+
+- [docs/architecture/ARCHITECTURE_REFACTORING.md](docs/architecture/ARCHITECTURE_REFACTORING.md) - Handler Pattern
+- [docs/architecture/MANUAL_DI.md](docs/architecture/MANUAL_DI.md) - Dependency Injection
+- [docs/architecture/OBSERVABILITY.md](docs/architecture/OBSERVABILITY.md) - Sistema de observabilidade
+
 ### Mudanças Recentes
 
 - [Web Search Híbrido](changes/01-web-search-hybrid.md) - Busca real na internet
 - [Agent Skills](changes/02-agent-skills.md) - Sistema de habilidades
 - [OLLAMA.md](changes/03-ollama-md-system.md) - Configuração hierárquica
+
+### Problemas Comuns
+
+Veja a seção **Performance and Troubleshooting** no [CLAUDE.md](CLAUDE.md#performance-and-troubleshooting) para soluções de:
+- GPU sobrecarregada / fallback para CPU
+- Respostas lentas do LLM
+- Timeouts e travamentos
+- Alto uso de memória
 
 ## 🛠️ Tecnologias
 
