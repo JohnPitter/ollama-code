@@ -66,6 +66,13 @@ INTENÇÕES DISPONÍVEIS:
    - "procure solução para erro Z na internet"
    - "qual a temperatura em São Paulo" (requer dados em tempo real)
    - "quais as últimas notícias sobre Go"
+   - "qual o placar do jogo do Flamengo" (resultados esportivos)
+   - "quanto foi o último jogo do Sport" (resultados esportivos)
+   - "como está o jogo do Náutico" (dados em tempo real)
+
+   IMPORTANTE:
+   - Qualquer pergunta sobre PLACAR/RESULTADO/JOGO esportivo = web_search (requer dados atualizados!)
+   - "último jogo", "placar", "resultado" = web_search (NÃO question!)
 
    NÃO É web_search se usuário pede para CRIAR código! Isso é write_file.
 
@@ -83,12 +90,16 @@ REGRAS DE PRIORIDADE:
    - "oi", "olá", "obrigado", "valeu", "tchau", "ok", "certo", "show" → question
    - "tudo bem?", "como vai?", "estou bem", "tudo certo" → question
 
-1. Se usuário usa verbos de ANÁLISE (analisa, explica, revisa, examina, review) + arquivo específico → read_file
-2. Se usuário usa verbos de MODIFICAÇÃO (refatora, otimiza, melhora, corrige, fix, debug) + arquivo específico → write_file
-3. Se usuário usa verbos de CRIAÇÃO (criar, desenvolver, fazer, gerar, construir, escrever, implementar) + tecnologia → write_file
-4. Se usuário pede EXPLICITAMENTE para BUSCAR/PESQUISAR informações na internet → web_search
-5. Se usuário faz pergunta conceitual SEM pedir criação → question
-6. Em caso de dúvida entre análise e modificação:
+1. Se mensagem contém palavras de DADOS EM TEMPO REAL → web_search
+   - "placar", "resultado", "jogo", "último jogo", "clima", "temperatura", "notícias" → web_search
+   - EXEMPLOS: "quanto foi o placar do Sport", "resultado do Náutico", "clima em SP" → web_search
+
+2. Se usuário usa verbos de ANÁLISE (analisa, explica, revisa, examina, review) + arquivo específico → read_file
+3. Se usuário usa verbos de MODIFICAÇÃO (refatora, otimiza, melhora, corrige, fix, debug) + arquivo específico → write_file
+4. Se usuário usa verbos de CRIAÇÃO (criar, desenvolver, fazer, gerar, construir, escrever, implementar) + tecnologia → write_file
+5. Se usuário pede EXPLICITAMENTE para BUSCAR/PESQUISAR informações na internet → web_search
+6. Se usuário faz pergunta conceitual SEM pedir criação → question
+7. Em caso de dúvida entre análise e modificação:
    - "analisa/explica/revisa X" → read_file (apenas ler e explicar)
    - "refatora/otimiza/corrige X" → write_file (ler e modificar)
    - "encontra bugs em X" → read_file (apenas analisar, não corrigir)
@@ -120,6 +131,7 @@ Mensagem do usuário:
 
 ATENÇÃO - REGRAS DE CLASSIFICAÇÃO:
 - CORTESIA/SAUDAÇÃO (< 15 palavras): "oi", "olá", "obrigado", "valeu", "tchau" → question
+- DADOS EM TEMPO REAL: palavras "placar", "resultado", "jogo", "clima", "temperatura" → web_search
 - Verbos de ANÁLISE (analisa, explica, revisa, review, examina) + arquivo → read_file
 - Verbos de MODIFICAÇÃO (refatora, otimiza, corrige, melhora, fix, debug) + arquivo → write_file
 - Verbos de CRIAÇÃO (cria, desenvolve, faz, gera, constrói) + tecnologia → write_file
