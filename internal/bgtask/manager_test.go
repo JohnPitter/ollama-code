@@ -202,6 +202,9 @@ func TestManager_GetFullOutput(t *testing.T) {
 	task, _ := mgr.Start(cmd, []string{arg, "echo hello world"}, "")
 	mgr.Wait(task.ID)
 
+	// Small delay to ensure output buffers are flushed
+	time.Sleep(50 * time.Millisecond)
+
 	stdout, _, err := mgr.GetFullOutput(task.ID)
 	if err != nil {
 		t.Fatalf("GetFullOutput failed: %v", err)
@@ -227,6 +230,9 @@ func TestManager_GetNewOutput(t *testing.T) {
 
 	task, _ := mgr.Start(cmd, []string{arg, "echo line1 && echo line2"}, "")
 	mgr.Wait(task.ID)
+
+	// Small delay to ensure output buffers are flushed
+	time.Sleep(50 * time.Millisecond)
 
 	// Primeira leitura - deve retornar todo output
 	stdout1, _, err := mgr.GetNewOutput(task.ID)
