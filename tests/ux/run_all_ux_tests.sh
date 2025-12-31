@@ -26,6 +26,7 @@ TESTS=(
     "04_code_generation/test_code_gen.sh"
     "05_web_search/test_web_search.sh"
     "07_error_handling/test_error_handling.sh"
+    "08_output_quality/test_useful_output.sh"
 )
 
 # Create log directory
