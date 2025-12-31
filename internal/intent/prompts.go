@@ -62,14 +62,24 @@ INTENÇÕES DISPONÍVEIS:
 
    NÃO É web_search se usuário pede para CRIAR código! Isso é write_file.
 
-8. question - Apenas pergunta conceitual, sem ação específica
-   Exemplos: "o que é REST", "como funciona async/await", "explique closures"
+8. question - Apenas pergunta conceitual, sem ação específica OU mensagens de cortesia/sociais
+   Exemplos:
+   - Conceituais: "o que é REST", "como funciona async/await", "explique closures"
+   - Cortesia/Sociais: "oi", "olá", "tudo bem", "obrigado", "valeu", "tchau", "até logo"
+   - Confirmação: "ok", "certo", "entendi", "blz", "show"
+   - Estado: "estou bem", "tudo certo", "tudo ótimo"
+
+   IMPORTANTE: Mensagens curtas de saudação/agradecimento = question (NÃO web_search!)
 
 REGRAS DE PRIORIDADE:
+0. PRIMEIRO: Se mensagem é APENAS cortesia/saudação/agradecimento (< 15 palavras) → question
+   - "oi", "olá", "obrigado", "valeu", "tchau", "ok", "certo", "show" → question
+   - "tudo bem?", "como vai?", "estou bem", "tudo certo" → question
+
 1. Se usuário usa verbos de ANÁLISE (analisa, explica, revisa, examina, review) + arquivo específico → read_file
 2. Se usuário usa verbos de MODIFICAÇÃO (refatora, otimiza, melhora, corrige, fix, debug) + arquivo específico → write_file
 3. Se usuário usa verbos de CRIAÇÃO (criar, desenvolver, fazer, gerar, construir, escrever, implementar) + tecnologia → write_file
-4. Se usuário pede para BUSCAR/PESQUISAR informações na internet → web_search
+4. Se usuário pede EXPLICITAMENTE para BUSCAR/PESQUISAR informações na internet → web_search
 5. Se usuário faz pergunta conceitual SEM pedir criação → question
 6. Em caso de dúvida entre análise e modificação:
    - "analisa/explica/revisa X" → read_file (apenas ler e explicar)
@@ -102,10 +112,11 @@ Mensagem do usuário:
 "%s"
 
 ATENÇÃO - REGRAS DE CLASSIFICAÇÃO:
+- CORTESIA/SAUDAÇÃO (< 15 palavras): "oi", "olá", "obrigado", "valeu", "tchau" → question
 - Verbos de ANÁLISE (analisa, explica, revisa, review, examina) + arquivo → read_file
 - Verbos de MODIFICAÇÃO (refatora, otimiza, corrige, melhora, fix, debug) + arquivo → write_file
 - Verbos de CRIAÇÃO (cria, desenvolve, faz, gera, constrói) + tecnologia → write_file
-- Informações da internet (temperatura, notícias, documentação online) → web_search
+- EXPLÍCITA busca de informações na internet (temperatura, notícias, documentação) → web_search
 - Pergunta conceitual sem ação → question
 
 EXEMPLOS IMPORTANTES:
