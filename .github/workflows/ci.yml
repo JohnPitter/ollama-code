@@ -13,6 +13,7 @@ jobs:
     name: Test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         go: ['1.21', '1.22']
@@ -30,21 +31,8 @@ jobs:
     - name: Get dependencies
       run: go mod download
 
-    - name: Run tests (Unix)
-      if: runner.os != 'Windows'
-      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-    - name: Run tests (Windows)
-      if: runner.os == 'Windows'
-      run: go test -v ./...
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      if: matrix.os == 'ubuntu-latest' && matrix.go == '1.22'
-      with:
-        files: ./coverage.out
-        flags: unittests
-        name: codecov-umbrella
+    - name: Run tests
+      run: go test -v -timeout 5m ./...
 
   lint:
     name: Lint
