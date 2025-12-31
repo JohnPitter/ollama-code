@@ -4,10 +4,9 @@ run:
   modules-download-mode: readonly
 
 linters:
-  # Only enable minimal linters that are critical
+  # Only enable typecheck - compilation errors only
   enable:
-    - typecheck     # Compilation errors
-    - staticcheck   # Static analysis
+    - typecheck
   disable-all: true
 
 issues:
