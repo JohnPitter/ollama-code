@@ -60,7 +60,7 @@ func (m *Manager) Spawn(cfg AgentConfig) (*Subagent, error) {
 		Type:        cfg.Type,
 		Prompt:      cfg.Prompt,
 		Model:       cfg.Model,
-		Status:      StatusPending,
+		status:      StatusPending,
 		WorkDir:     cfg.WorkDir,
 		MaxTokens:   cfg.MaxTokens,
 		Temperature: cfg.Temperature,
@@ -89,9 +89,9 @@ func (m *Manager) execute(agent *Subagent) {
 	defer close(agent.done)
 	defer m.onAgentComplete(agent)
 
-	// Marcar como running
-	agent.Status = StatusRunning
-	agent.StartedAt = time.Now()
+	// Marcar como running (thread-safe)
+	agent.SetStatus(StatusRunning)
+	agent.SetStartedAt(time.Now())
 
 	// Executar agent
 	result, err := m.executor(agent.ctx, agent)
@@ -100,26 +100,26 @@ func (m *Manager) execute(agent *Subagent) {
 	select {
 	case <-agent.ctx.Done():
 		if agent.ctx.Err() == context.DeadlineExceeded {
-			agent.Status = StatusTimeout
-			agent.Error = fmt.Errorf("agent timeout after %v", agent.Timeout)
+			agent.SetStatus(StatusTimeout)
+			agent.SetError(fmt.Errorf("agent timeout after %v", agent.Timeout))
 		} else {
-			agent.Status = StatusKilled
-			agent.Error = fmt.Errorf("agent killed")
+			agent.SetStatus(StatusKilled)
+			agent.SetError(fmt.Errorf("agent killed"))
 		}
 		return
 	default:
 	}
 
-	// Processar resultado
-	agent.CompletedAt = time.Now()
+	// Processar resultado (thread-safe)
+	agent.SetCompletedAt(time.Now())
 	if err != nil {
-		agent.Status = StatusFailed
-		agent.Error = err
+		agent.SetStatus(StatusFailed)
+		agent.SetError(err)
 		return
 	}
 
-	agent.Status = StatusCompleted
-	agent.Result = result
+	agent.SetStatus(StatusCompleted)
+	agent.SetResult(result)
 }
 
 // onAgentComplete chamado quando um agent completa
@@ -129,7 +129,7 @@ func (m *Manager) onAgentComplete(agent *Subagent) {
 
 	m.activeAgents--
 
-	if agent.Status == StatusCompleted {
+	if agent.GetStatus() == StatusCompleted {
 		m.totalCompleted++
 	} else {
 		m.totalFailed++
@@ -146,11 +146,11 @@ func (m *Manager) Wait(agentID string) (string, error) {
 	// Aguardar conclusão
 	<-agent.done
 
-	if agent.Error != nil {
-		return "", agent.Error
+	if agentErr := agent.GetError(); agentErr != nil {
+		return "", agentErr
 	}
 
-	return agent.Result, nil
+	return agent.GetResult(), nil
 }
 
 // WaitWithTimeout aguarda conclusão com timeout customizado
@@ -163,10 +163,10 @@ func (m *Manager) WaitWithTimeout(agentID string, timeout time.Duration) (string
 	// Aguardar com timeout
 	select {
 	case <-agent.done:
-		if agent.Error != nil {
-			return "", agent.Error
+		if agentErr := agent.GetError(); agentErr != nil {
+			return "", agentErr
 		}
-		return agent.Result, nil
+		return agent.GetResult(), nil
 
 	case <-time.After(timeout):
 		return "", fmt.Errorf("wait timeout after %v", timeout)
@@ -180,9 +180,10 @@ func (m *Manager) Kill(agentID string) error {
 		return err
 	}
 
-	// Verificar se já terminou
-	if agent.Status.IsTerminal() {
-		return fmt.Errorf("agent already terminated with status: %s", agent.Status)
+	// Verificar se já terminou (thread-safe)
+	status := agent.GetStatus()
+	if status.IsTerminal() {
+		return fmt.Errorf("agent already terminated with status: %s", status)
 	}
 
 	// Cancelar context
@@ -227,7 +228,7 @@ func (m *Manager) ListByStatus(status AgentStatus) []*Subagent {
 
 	agents := make([]*Subagent, 0)
 	for _, agent := range m.agents {
-		if agent.Status == status {
+		if agent.GetStatus() == status {
 			agents = append(agents, agent)
 		}
 	}
@@ -259,13 +260,13 @@ func (m *Manager) Cleanup(olderThan time.Duration) int {
 	cutoff := time.Now().Add(-olderThan)
 
 	for id, agent := range m.agents {
-		// Só remover agents terminados
-		if !agent.Status.IsTerminal() {
+		// Só remover agents terminados (thread-safe)
+		if !agent.GetStatus().IsTerminal() {
 			continue
 		}
 
 		// Só remover se completos antes do cutoff
-		if agent.CompletedAt.Before(cutoff) {
+		if agent.GetCompletedAt().Before(cutoff) {
 			delete(m.agents, id)
 			removed++
 		}

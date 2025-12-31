@@ -78,6 +78,14 @@ func TestAgentStatus_IsTerminal(t *testing.T) {
 	}
 }
 
+// newTestSubagent creates a Subagent for testing with the given status and error
+func newTestSubagent(status AgentStatus, err error) *Subagent {
+	agent := &Subagent{}
+	agent.SetStatus(status)
+	agent.SetError(err)
+	return agent
+}
+
 // TestSubagent_IsSuccess testa verificação de sucesso
 func TestSubagent_IsSuccess(t *testing.T) {
 	testCases := []struct {
@@ -86,35 +94,23 @@ func TestSubagent_IsSuccess(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "Completed without error is success",
-			agent: &Subagent{
-				Status: StatusCompleted,
-				Error:  nil,
-			},
+			name:     "Completed without error is success",
+			agent:    newTestSubagent(StatusCompleted, nil),
 			expected: true,
 		},
 		{
-			name: "Completed with error is not success",
-			agent: &Subagent{
-				Status: StatusCompleted,
-				Error:  &mockError{},
-			},
+			name:     "Completed with error is not success",
+			agent:    newTestSubagent(StatusCompleted, &mockError{}),
 			expected: false,
 		},
 		{
-			name: "Failed is not success",
-			agent: &Subagent{
-				Status: StatusFailed,
-				Error:  nil,
-			},
+			name:     "Failed is not success",
+			agent:    newTestSubagent(StatusFailed, nil),
 			expected: false,
 		},
 		{
-			name: "Running is not success",
-			agent: &Subagent{
-				Status: StatusRunning,
-				Error:  nil,
-			},
+			name:     "Running is not success",
+			agent:    newTestSubagent(StatusRunning, nil),
 			expected: false,
 		},
 	}
@@ -136,6 +132,14 @@ func (e *mockError) Error() string {
 	return "mock error"
 }
 
+// newTestSubagentWithTimes creates a Subagent for testing with the given times
+func newTestSubagentWithTimes(startedAt, completedAt time.Time) *Subagent {
+	agent := &Subagent{}
+	agent.SetStartedAt(startedAt)
+	agent.SetCompletedAt(completedAt)
+	return agent
+}
+
 // TestSubagent_Duration testa cálculo de duração
 func TestSubagent_Duration(t *testing.T) {
 	now := time.Now()
@@ -146,28 +150,18 @@ func TestSubagent_Duration(t *testing.T) {
 		expected time.Duration
 	}{
 		{
-			name: "Not started yet",
-			agent: &Subagent{
-				StartedAt:   time.Time{},
-				CompletedAt: time.Time{},
-			},
+			name:     "Not started yet",
+			agent:    newTestSubagentWithTimes(time.Time{}, time.Time{}),
 			expected: 0,
 		},
 		{
-			name: "Started but not completed",
-			agent: &Subagent{
-				StartedAt:   now.Add(-1 * time.Second),
-				CompletedAt: time.Time{},
-			},
-			// Duration should be approximately 1 second (will be slightly more due to test execution time)
+			name:     "Started but not completed",
+			agent:    newTestSubagentWithTimes(now.Add(-1*time.Second), time.Time{}),
 			expected: 900 * time.Millisecond, // Allow some tolerance
 		},
 		{
-			name: "Completed",
-			agent: &Subagent{
-				StartedAt:   now.Add(-2 * time.Second),
-				CompletedAt: now,
-			},
+			name:     "Completed",
+			agent:    newTestSubagentWithTimes(now.Add(-2*time.Second), now),
 			expected: 2 * time.Second,
 		},
 	}
@@ -384,9 +378,8 @@ func TestAgentConfig_Customization(t *testing.T) {
 
 // TestSubagent_Duration_RealTime testa duração com tempo real
 func TestSubagent_Duration_RealTime(t *testing.T) {
-	agent := &Subagent{
-		StartedAt: time.Now(),
-	}
+	agent := &Subagent{}
+	agent.SetStartedAt(time.Now())
 
 	// Aguardar um pouco
 	time.Sleep(100 * time.Millisecond)

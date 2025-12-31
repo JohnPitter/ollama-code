@@ -71,8 +71,9 @@ func TestSpawn_Success(t *testing.T) {
 		t.Errorf("Expected type Explore, got %s", agent.Type)
 	}
 
-	if agent.Status != StatusPending && agent.Status != StatusRunning {
-		t.Errorf("Expected status pending or running, got %s", agent.Status)
+	status := agent.GetStatus()
+	if status != StatusPending && status != StatusRunning {
+		t.Errorf("Expected status pending or running, got %s", status)
 	}
 }
 
@@ -150,8 +151,8 @@ func TestWait_Success(t *testing.T) {
 
 	// Verificar status final
 	finalAgent, _ := manager.Get(agent.ID)
-	if finalAgent.Status != StatusCompleted {
-		t.Errorf("Expected status completed, got %s", finalAgent.Status)
+	if finalAgent.GetStatus() != StatusCompleted {
+		t.Errorf("Expected status completed, got %s", finalAgent.GetStatus())
 	}
 }
 
@@ -174,8 +175,8 @@ func TestWait_Failure(t *testing.T) {
 
 	// Verificar status final
 	finalAgent, _ := manager.Get(agent.ID)
-	if finalAgent.Status != StatusFailed {
-		t.Errorf("Expected status failed, got %s", finalAgent.Status)
+	if finalAgent.GetStatus() != StatusFailed {
+		t.Errorf("Expected status failed, got %s", finalAgent.GetStatus())
 	}
 }
 
@@ -257,8 +258,8 @@ func TestKill_Running(t *testing.T) {
 
 	// Verificar status final
 	finalAgent, _ := manager.Get(agent.ID)
-	if finalAgent.Status != StatusKilled {
-		t.Errorf("Expected status killed, got %s", finalAgent.Status)
+	if finalAgent.GetStatus() != StatusKilled {
+		t.Errorf("Expected status killed, got %s", finalAgent.GetStatus())
 	}
 }
 
@@ -532,8 +533,8 @@ func TestAgentTimeout(t *testing.T) {
 
 	// Verificar status
 	finalAgent, _ := manager.Get(agent.ID)
-	if finalAgent.Status != StatusTimeout {
-		t.Errorf("Expected status timeout, got %s", finalAgent.Status)
+	if finalAgent.GetStatus() != StatusTimeout {
+		t.Errorf("Expected status timeout, got %s", finalAgent.GetStatus())
 	}
 }
 

@@ -2,6 +2,7 @@ package subagent
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -40,12 +41,13 @@ type Subagent struct {
 	Type        AgentType
 	Prompt      string
 	Model       string
-	Status      AgentStatus
-	Result      string
-	Error       error
+	status      AgentStatus // Changed to unexported, use GetStatus/SetStatus
+	result      string      // Changed to unexported, use GetResult/SetResult
+	err         error       // Changed to unexported, use GetError/SetError
 	CreatedAt   time.Time
-	StartedAt   time.Time
-	CompletedAt time.Time
+	startedAt   time.Time     // Changed to unexported
+	completedAt time.Time     // Changed to unexported
+	mu          sync.RWMutex  // Protects mutable fields
 
 	// Context isolation
 	WorkDir     string
@@ -140,20 +142,95 @@ func (s AgentStatus) IsTerminal() bool {
 	}
 }
 
+// GetStatus returns the current status (thread-safe)
+func (s *Subagent) GetStatus() AgentStatus {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.status
+}
+
+// SetStatus sets the status (thread-safe)
+func (s *Subagent) SetStatus(status AgentStatus) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.status = status
+}
+
+// GetResult returns the result (thread-safe)
+func (s *Subagent) GetResult() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.result
+}
+
+// SetResult sets the result (thread-safe)
+func (s *Subagent) SetResult(result string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.result = result
+}
+
+// GetError returns the error (thread-safe)
+func (s *Subagent) GetError() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.err
+}
+
+// SetError sets the error (thread-safe)
+func (s *Subagent) SetError(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.err = err
+}
+
+// GetStartedAt returns the started time (thread-safe)
+func (s *Subagent) GetStartedAt() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.startedAt
+}
+
+// SetStartedAt sets the started time (thread-safe)
+func (s *Subagent) SetStartedAt(t time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.startedAt = t
+}
+
+// GetCompletedAt returns the completed time (thread-safe)
+func (s *Subagent) GetCompletedAt() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.completedAt
+}
+
+// SetCompletedAt sets the completed time (thread-safe)
+func (s *Subagent) SetCompletedAt(t time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.completedAt = t
+}
+
 // IsSuccess verifica se o agent completou com sucesso
 func (s *Subagent) IsSuccess() bool {
-	return s.Status == StatusCompleted && s.Error == nil
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.status == StatusCompleted && s.err == nil
 }
 
 // Duration retorna a duração da execução do agent
 func (s *Subagent) Duration() time.Duration {
-	if s.StartedAt.IsZero() {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.startedAt.IsZero() {
 		return 0
 	}
 
-	if s.CompletedAt.IsZero() {
-		return time.Since(s.StartedAt)
+	if s.completedAt.IsZero() {
+		return time.Since(s.startedAt)
 	}
 
-	return s.CompletedAt.Sub(s.StartedAt)
+	return s.completedAt.Sub(s.startedAt)
 }
